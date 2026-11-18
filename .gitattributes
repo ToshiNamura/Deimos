@@ -1,0 +1,33 @@
+# Normalise line endings in the repository and in checkouts.
+* text=auto eol=lf
+
+# Sources and build files
+*.c            text
+*.cc           text
+*.cpp          text diff=cpp
+*.h            text
+*.hpp          text
+*.inl          text
+*.cmake        text
+*.txt          text
+*.in           text
+*.json         text
+*.yml          text
+*.yaml         text
+*.md           text
+*.plist        text
+*.service.in   text
+
+# Binary assets
+*.png          binary
+*.ico          binary
+*.jpg          binary
+*.jpeg         binary
+*.gif          binary
+*.exe          binary
+*.dll          binary
+*.lib          binary
+*.pdb          binary
+
+# GitHub configuration does not belong in source archives
+.github/       export-ignore

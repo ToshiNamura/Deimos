@@ -1,5 +1,9 @@
 # Deimos
 
+[![CI](https://github.com/ToshiNamura/Deimos/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ToshiNamura/Deimos/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](CMakeLists.txt)
+
 Deimos is a cross-platform control plane for DPI bypass on top of
 [zapret](https://github.com/bol-van/zapret) and [zapret2](https://github.com/bol-van/zapret2).
 
@@ -12,6 +16,23 @@ It splits the problem into two programs:
 
 The daemon and the client speak plain HTTP + JSON with a bearer token, so the same UI and
 CLI manage a daemon on `127.0.0.1` and a daemon on a remote server.
+
+## Features
+
+- **Profiles instead of flags.** A profile describes filters, desync modes, split
+  positions, fooling, fake payloads, host lists and ipsets. `deimos profiles preview`
+  prints the exact zapret command line before anything is started.
+- **Supervised zapret.** Every launch is a child process with captured output, a restart
+  policy (`engine.maxRestarts`, `engine.restartBackoffMs`) and guaranteed cleanup:
+  Windows job objects, POSIX process groups.
+- **One API, two front ends.** The GUI and the CLI are the same binary talking to the same
+  REST endpoints, so both work locally and against a remote daemon.
+- **Loopback and token first.** The daemon binds `127.0.0.1`, compares bearer tokens in
+  constant time, refuses remote listening without authentication and supports optional TLS.
+- **Services are first class.** One flag installs the Windows service, the systemd unit or
+  the launchd plist.
+- **Headless footprint.** The `daemon-only` preset builds a single statically linked
+  `deimosd` for servers, routers and containers.
 
 ## Status
 
@@ -90,6 +111,7 @@ user can manage several daemons and the CLI can pick the same one with `endpoint
 
 ## Requirements
 
+- Windows 10 or newer, Linux or macOS
 - CMake 3.25 or newer
 - A C++20 compiler (MSVC 19.4x, GCC 12+, Clang 15+)
 - zapret or zapret2 binaries for the platform whose traffic you want to modify
@@ -98,7 +120,18 @@ user can manage several daemons and the CLI can pick the same one with `endpoint
 Third-party dependencies (nlohmann/json, cpp-httplib, GLFW, Dear ImGui, Catch2) are
 downloaded automatically by CMake unless they are already installed.
 
+## Contributing
+
+Bug reports and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers the
+build, test and style requirements; [CHANGELOG.md](CHANGELOG.md) records what changed.
+
+## Security
+
+Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md), never in a
+public issue.
+
 ## License
 
-MIT, see [LICENSE](LICENSE). zapret is a separate project with its own license and is never
-bundled.
+MIT, see [LICENSE](LICENSE). Third-party components are listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). zapret is a separate project with its own
+license and is never bundled.

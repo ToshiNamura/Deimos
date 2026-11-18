@@ -1,0 +1,61 @@
+name: Feature request
+description: Suggest a capability or a change in behaviour
+title: "[feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to do that Deimos makes hard or impossible today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behaviour
+      description: >
+        What should Deimos do instead? Mention the configuration fields, API endpoints or
+        commands you expect to use.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing workarounds, other tools, or approaches you rejected.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected area
+      options:
+        - deimosd daemon
+        - REST API
+        - Command line client
+        - Desktop interface
+        - Profiles and strategies
+        - Building, install or packaging
+        - Documentation
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Platform, deployment (local, router, VPS) and anything else that shapes the request.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched the existing issues for the same request.
+          required: true

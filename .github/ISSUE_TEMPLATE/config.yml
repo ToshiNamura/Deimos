@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Build, test and packaging
+    url: https://github.com/ToshiNamura/Deimos/blob/main/docs/building.md
+    about: Requirements, CMake presets, options, tests and CPack packaging
+  - name: Deployment and operations
+    url: https://github.com/ToshiNamura/Deimos/blob/main/docs/deployment.md
+    about: Services on Windows, systemd and launchd, remote access, troubleshooting
+  - name: Daemon API reference
+    url: https://github.com/ToshiNamura/Deimos/blob/main/docs/daemon-api.md
+    about: Endpoints, payloads and error codes
+  - name: Report a security vulnerability
+    url: https://github.com/ToshiNamura/Deimos/security/advisories/new
+    about: Private vulnerability reporting - please do not open a public issue
