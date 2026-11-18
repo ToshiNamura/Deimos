@@ -8,8 +8,8 @@ cmake --preset daemon-only
 cmake --build --preset daemon-only
 ```
 
-That produces one `deimosd` binary with a static C++ runtime and no UI, CLI or test
-dependencies.
+That produces one `deimosd` binary (`out/build/daemon-only/bin/deimosd`) with a static C++
+runtime and no UI, CLI or test dependencies.
 
 ## Prerequisites
 

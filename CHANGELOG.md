@@ -31,9 +31,9 @@ First public release.
   over the same transport, with saved endpoints in `cli.json` and `ui.json`.
 - Service integration: `--install-service` for Windows services and systemd,
   `--print-unit`, `--print-plist` and `--generate-token`.
-- CMake presets (`dev`, `release`, `daemon-only`, `windows-vs2022`, `windows-vs2026`),
-  component-based install rules and CPack packaging (ZIP/NSIS on Windows, TGZ/DEB
-  elsewhere).
+- CMake presets (`x64-debug`, `x64-release`, `linux-debug`, `linux-release`,
+  `macos-debug`, `macos-release`, `daemon-only`), component-based install rules and CPack
+  packaging (ZIP/NSIS on Windows, TGZ/DEB elsewhere).
 - Catch2 test suite covering configuration round-trips and validation, protocol
   serialisation, zapret command generation, process supervision and the HTTP API.
 - Documentation for architecture, the daemon API, strategies, building and deployment.

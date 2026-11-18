@@ -11,23 +11,35 @@ The GUI needs an OpenGL 3.2 capable driver. Everything else is headless.
 
 ## Presets
 
-```bash
-cmake --preset dev            # Ninja, Debug, tests on
-cmake --preset release        # Ninja, Release, tests on
-cmake --preset daemon-only    # deimosd only, static runtime, no UI/CLI/tests
-```
+The presets use Ninja with the platform compiler, so they expect a developer shell
+(`vcvars64.bat` on Windows, a normal shell with a compiler on Linux and macOS):
 
-Ninja presets expect a developer shell (`vcvars64.bat` on Windows, a normal shell with a
-compiler on Linux/macOS). On Windows the Visual Studio generators work without any
-environment setup:
+| Preset | What it configures |
+| --- | --- |
+| `x64-debug`, `x64-release` | Windows, Ninja with `cl.exe`, Debug or Release |
+| `linux-debug`, `linux-release` | Linux, Ninja, Debug or Release |
+| `macos-debug`, `macos-release` | macOS, Ninja, Debug or Release |
+| `daemon-only` | `deimosd` only, static runtime, no UI/CLI/tests, any platform |
+
+The platform presets are conditioned on the host, so `x64-release` only configures on
+Windows and `linux-debug` only on Linux. Builds land in `out/build/<preset>` and installs
+in `out/install/<preset>`:
+
+```bash
+cmake --preset linux-debug     # Ninja, Debug, tests
+cmake --preset linux-release   # Ninja, Release, tests
+cmake --preset daemon-only     # deimosd only, static runtime, no UI/CLI/tests
+```
 
 ```powershell
-cmake --preset windows-vs2026
-cmake --build --preset windows-vs2026
-ctest --test-dir build/windows-vs2026 -C Release --output-on-failure
+cmake --preset x64-release
+cmake --build --preset x64-release
+ctest --preset x64-release
 ```
 
-`windows-vs2022` is the same for Visual Studio 2022.
+On Linux the GUI needs the X11 development headers; CI passes `-DGLFW_BUILD_WAYLAND=OFF`
+to GLFW so the configure step does not require `wayland-scanner`. Drop the flag if the
+toolchain is installed and you want native Wayland support.
 
 ## Targets
 
@@ -71,9 +83,12 @@ cmake -S . -B build/gui -G Ninja -DDEIMOS_BUILD_CLI=OFF
 ## Tests
 
 ```bash
-ctest --test-dir build/dev --output-on-failure
-./build/dev/bin/deimos_tests "[zapret]"
+ctest --preset linux-debug
+./out/build/linux-debug/bin/deimos_tests "[zapret]"
 ```
+
+On Windows: `ctest --preset x64-release` and
+`.\out\build\x64-release\bin\deimos_tests.exe "[zapret]"`.
 
 The suite covers configuration round-trips and validation, zapret command generation for
 all three tools, process supervision (including the missing-binary path) and the HTTP API
@@ -88,9 +103,9 @@ artefacts:
 ```bash
 cmake --preset daemon-only
 cmake --build --preset daemon-only
-cmake --install build/daemon-only --prefix /opt/deimos --component daemon
+cmake --install out/build/daemon-only --prefix /opt/deimos --component daemon
 
-cd build/release && cpack -G ZIP -D CPACK_COMPONENTS_ALL=daemon
+cd out/build/linux-release && cpack -G ZIP -D CPACK_COMPONENTS_ALL=daemon
 ```
 
 ## Formatting

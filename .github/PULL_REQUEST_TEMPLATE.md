@@ -19,9 +19,9 @@
 <!-- The exact commands you ran, and their outcome. -->
 
 ```bash
-cmake --preset dev
-cmake --build --preset dev
-ctest --test-dir build/dev --output-on-failure
+cmake --preset <platform>-debug     # linux-debug, x64-debug, macos-debug
+cmake --build --preset <platform>-debug
+ctest --preset <platform>-debug
 ```
 
 ## Checklist

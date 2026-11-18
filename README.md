@@ -51,14 +51,17 @@ CLI are functional but still growing.
 
 ### Build everything
 
+The presets use Ninja, so run them from a developer shell (`vcvars64.bat` on Windows, a
+normal shell with a compiler on Linux and macOS):
+
 ```powershell
-cmake --preset windows-vs2026
-cmake --build --preset windows-vs2026
+cmake --preset x64-release
+cmake --build --preset x64-release
 ```
 
 ```bash
-cmake --preset release
-cmake --build --preset release
+cmake --preset linux-release
+cmake --build --preset linux-release
 ```
 
 ### Build only the daemon (servers, routers, headless machines)

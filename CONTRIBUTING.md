@@ -27,24 +27,18 @@ the first configure. Pass `-DDEIMOS_FETCH_DEPS=OFF` to use system packages inste
 ## Build and test
 
 The Ninja presets expect a developer shell (`vcvars64.bat` on Windows, a normal shell with
-a compiler on Linux and macOS):
+a compiler on Linux and macOS). There is one preset pair per platform, and they only
+configure on their own host:
 
 ```bash
-cmake --preset dev
-cmake --build --preset dev
-ctest --test-dir build/dev --output-on-failure
+cmake --preset linux-debug      # or x64-debug on Windows, macos-debug on macOS
+cmake --build --preset linux-debug
+ctest --preset linux-debug
 ```
 
-On Windows the Visual Studio generators need no environment setup:
+Builds land in `out/build/<preset>` and installs in `out/install/<preset>`.
 
-```powershell
-cmake --preset windows-vs2026
-cmake --build --preset windows-vs2026
-ctest --test-dir build/windows-vs2026 -C Release --output-on-failure
-```
-
-`windows-vs2022` is the same for Visual Studio 2022. `daemon-only` builds a single
-`deimosd` without the UI, the CLI or the tests:
+`daemon-only` builds a single `deimosd` without the UI, the CLI or the tests:
 
 ```bash
 cmake --preset daemon-only
@@ -54,7 +48,7 @@ cmake --build --preset daemon-only
 Running one area of the suite uses Catch2 tags:
 
 ```bash
-./build/dev/bin/deimos_tests "[zapret]"
+./out/build/linux-debug/bin/deimos_tests "[zapret]"
 ```
 
 The available tags are `[config]`, `[protocol]`, `[zapret]`, `[process]` and `[api]`.

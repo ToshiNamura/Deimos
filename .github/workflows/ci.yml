@@ -28,13 +28,13 @@ jobs:
             libgl1-mesa-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
 
       - name: Configure
-        run: cmake --preset dev -DDEIMOS_WARNINGS_AS_ERRORS=ON
+        run: cmake --preset linux-debug -DDEIMOS_WARNINGS_AS_ERRORS=ON -DGLFW_BUILD_WAYLAND=OFF
 
       - name: Build
-        run: cmake --build --preset dev
+        run: cmake --build --preset linux-debug
 
       - name: Test
-        run: ctest --test-dir build/dev --output-on-failure
+        run: ctest --preset linux-debug
 
   linux-daemon-only:
     name: Linux (daemon only)
@@ -55,8 +55,8 @@ jobs:
 
       - name: Smoke test
         run: |
-          ./build/daemon-only/bin/deimosd --version
-          ./build/daemon-only/bin/deimosd --print-unit | head -n 5
+          ./out/build/daemon-only/bin/deimosd --version
+          ./out/build/daemon-only/bin/deimosd --print-unit | head -n 5
 
   windows:
     name: Windows (MSVC)
@@ -65,7 +65,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Configure
-        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DDEIMOS_BUILD_TESTS=ON
+        run: cmake -S . -B build -A x64 -DDEIMOS_BUILD_TESTS=ON
 
       - name: Build
         run: cmake --build build --config Release --parallel
