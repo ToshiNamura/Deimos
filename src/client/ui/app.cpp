@@ -69,29 +69,6 @@ const char* titleFor(int view)
     }
 }
 
-std::string formatDuration(std::int64_t seconds)
-{
-    if (seconds <= 0)
-    {
-        return "0s";
-    }
-    const std::int64_t hours = seconds / 3600;
-    const std::int64_t minutes = (seconds % 3600) / 60;
-    const std::int64_t remainder = seconds % 60;
-
-    std::string text;
-    if (hours > 0)
-    {
-        text += std::to_string(hours) + "h ";
-    }
-    if (hours > 0 || minutes > 0)
-    {
-        text += std::to_string(minutes) + "m ";
-    }
-    text += std::to_string(remainder) + "s";
-    return text;
-}
-
 std::vector<std::string> splitLines(const std::string& text)
 {
     std::vector<std::string> lines;
@@ -616,7 +593,7 @@ void App::beginNewProfile()
     editor_.isNew = true;
     editor_.profile = std::move(profile);
     ++editorGeneration_;
-    editor_.rounds.push_back(RoundEditor{"443", ""});
+    editor_.rounds.push_back(RoundEditor{"443", "", ""});
     previewCommands_.clear();
     previewDiagnostics_.clear();
     showPreview_ = false;

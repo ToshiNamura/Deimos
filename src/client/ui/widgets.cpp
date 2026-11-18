@@ -12,7 +12,7 @@ namespace
 
 ImU32 blend(ImU32 from, ImU32 to, float amount)
 {
-    const auto channel = [amount](int a, int b)
+    const auto channel = [amount](ImU32 a, ImU32 b)
     {
         return static_cast<int>(static_cast<float>(a) + (static_cast<float>(b) - static_cast<float>(a)) * amount);
     };

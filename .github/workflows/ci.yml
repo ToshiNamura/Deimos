@@ -31,7 +31,7 @@ jobs:
         run: cmake --preset linux-debug -DDEIMOS_WARNINGS_AS_ERRORS=ON -DGLFW_BUILD_WAYLAND=OFF
 
       - name: Build
-        run: cmake --build --preset linux-debug
+        run: cmake --build --preset linux-debug -- -k 0
 
       - name: Test
         run: ctest --preset linux-debug
