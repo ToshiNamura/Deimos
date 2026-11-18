@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Linux (GCC)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain and GUI dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build \
+            libgl1-mesa-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
+
+      - name: Configure
+        run: cmake --preset dev -DDEIMOS_WARNINGS_AS_ERRORS=ON
+
+      - name: Build
+        run: cmake --build --preset dev
+
+      - name: Test
+        run: ctest --test-dir build/dev --output-on-failure
+
+  linux-daemon-only:
+    name: Linux (daemon only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake ninja-build
+
+      - name: Configure
+        run: cmake --preset daemon-only
+
+      - name: Build
+        run: cmake --build --preset daemon-only
+
+      - name: Smoke test
+        run: |
+          ./build/daemon-only/bin/deimosd --version
+          ./build/daemon-only/bin/deimosd --print-unit | head -n 5
+
+  windows:
+    name: Windows (MSVC)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DDEIMOS_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Smoke test
+        run: |
+          .\build\bin\Release\deimosd.exe --version
+          .\build\bin\Release\deimos.exe --version

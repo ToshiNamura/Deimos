@@ -1,0 +1,49 @@
+# Build output
+build/
+out/
+install/
+cmake-build-*/
+_deps/
+CMakeUserPresets.json
+
+# Visual Studio
+.vs/
+*.vcxproj*
+*.sln
+*.suo
+*.user
+
+# Build artefacts
+*.o
+*.obj
+*.a
+*.lib
+*.exe
+*.dll
+*.pdb
+*.ilk
+*.exp
+*.so
+*.dylib
+*.log
+
+# Runtime state produced by local daemon runs
+*.pid
+runtime/
+deimos-data/
+
+# Editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+
+# Copilot tracking artefacts
+.copilot-tracking/
+
+# Secrets: never commit tokens, keys or certificates
+*.pem
+*.key
+*.pfx
+deimos-token*

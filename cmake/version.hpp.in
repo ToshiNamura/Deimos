@@ -1,0 +1,17 @@
+#pragma once
+
+#define DEIMOS_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
+#define DEIMOS_VERSION_MINOR @PROJECT_VERSION_MINOR@
+#define DEIMOS_VERSION_PATCH @PROJECT_VERSION_PATCH@
+#define DEIMOS_VERSION_STRING "@PROJECT_VERSION@"
+#define DEIMOS_VERSION_TAGGED "@DEIMOS_VERSION_TAGGED@"
+
+namespace deimos
+{
+
+constexpr const char* versionString() noexcept
+{
+    return DEIMOS_VERSION_STRING;
+}
+
+}

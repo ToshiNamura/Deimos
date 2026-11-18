@@ -1,0 +1,64 @@
+include_guard(GLOBAL)
+
+if(NOT DEIMOS_INSTALL)
+    return()
+endif()
+
+include(GNUInstallDirs)
+
+set(DEIMOS_CMAKE_INSTALL_DIR
+    "${CMAKE_INSTALL_LIBDIR}/cmake/Deimos"
+    CACHE STRING "Install destination for CMake package files")
+
+install(FILES
+        "${CMAKE_CURRENT_SOURCE_DIR}/README.md"
+        "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE"
+    DESTINATION "${CMAKE_INSTALL_DOCDIR}"
+    COMPONENT runtime)
+
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/docs/"
+    DESTINATION "${CMAKE_INSTALL_DOCDIR}/docs"
+    COMPONENT runtime
+    OPTIONAL)
+
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/packaging/deimosd.service.in"
+    DESTINATION "${CMAKE_INSTALL_DOCDIR}/packaging"
+    COMPONENT runtime
+    OPTIONAL)
+
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/packaging/com.deimos.daemon.plist"
+    DESTINATION "${CMAKE_INSTALL_DOCDIR}/packaging"
+    COMPONENT runtime
+    OPTIONAL)
+
+set(CPACK_PACKAGE_NAME "Deimos")
+set(CPACK_PACKAGE_VENDOR "ToshiNamura")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "DPI bypass control plane for zapret")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "Deimos")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_PACKAGE_EXECUTABLES "deimos;Deimos;deimosd;Deimos daemon")
+set(CPACK_STRIP_FILES ON)
+
+if(WIN32)
+    set(CPACK_GENERATOR "ZIP;NSIS")
+    set(CPACK_NSIS_DISPLAY_NAME "Deimos")
+    set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
+    set(CPACK_NSIS_MODIFY_PATH ON)
+    set(CPACK_NSIS_MUI_ICON "")
+    set(CPACK_NSIS_MUI_UNIICON "")
+else()
+    set(CPACK_GENERATOR "TGZ;DEB")
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "ToshiNamura")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "net")
+    set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+endif()
+
+set(CPACK_COMPONENTS_ALL runtime daemon ui cli development)
+set(CPACK_COMPONENT_RUNTIME_DISPLAY_NAME "Deimos (runtime files)")
+set(CPACK_COMPONENT_DAEMON_DISPLAY_NAME "Deimos daemon")
+set(CPACK_COMPONENT_UI_DISPLAY_NAME "Deimos desktop UI")
+set(CPACK_COMPONENT_CLI_DISPLAY_NAME "Deimos command line client")
+set(CPACK_COMPONENT_DEVELOPMENT_DISPLAY_NAME "Development files")
+
+include(CPack)

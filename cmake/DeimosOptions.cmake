@@ -1,0 +1,42 @@
+include_guard(GLOBAL)
+
+if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+    set(DEIMOS_IS_TOP_LEVEL ON)
+else()
+    set(DEIMOS_IS_TOP_LEVEL OFF)
+endif()
+
+option(DEIMOS_BUILD_DAEMON "Build the headless Deimos daemon (deimosd)" ON)
+option(DEIMOS_BUILD_CLI "Include the command line client in the deimos binary" ON)
+option(DEIMOS_BUILD_UI "Include the desktop UI in the deimos client" ON)
+option(DEIMOS_BUILD_TESTS "Build unit and integration tests" ${DEIMOS_IS_TOP_LEVEL})
+option(DEIMOS_SERVER_ONLY "Build only the daemon, for machines that run no UI" OFF)
+option(DEIMOS_FETCH_DEPS "Download third-party dependencies with FetchContent" ON)
+option(DEIMOS_ENABLE_TLS "Compile HTTPS support into daemon and client (requires OpenSSL)" OFF)
+option(DEIMOS_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
+option(DEIMOS_INSTALL "Generate install rules" ON)
+
+if(MSVC)
+    set(DEIMOS_STATIC_RUNTIME_DEFAULT ON)
+else()
+    set(DEIMOS_STATIC_RUNTIME_DEFAULT OFF)
+endif()
+option(DEIMOS_STATIC_RUNTIME "Link the C++ runtime statically (portable daemon binaries)" ${DEIMOS_STATIC_RUNTIME_DEFAULT})
+
+if(DEIMOS_SERVER_ONLY)
+    set(DEIMOS_BUILD_UI OFF CACHE BOOL "Include the desktop UI in the deimos client" FORCE)
+    set(DEIMOS_BUILD_CLI OFF CACHE BOOL "Build the Deimos command line client (deimos)" FORCE)
+    set(DEIMOS_BUILD_TESTS OFF CACHE BOOL "Build unit and integration tests" FORCE)
+    set(DEIMOS_BUILD_DAEMON ON CACHE BOOL "Build the headless Deimos daemon (deimosd)" FORCE)
+    set(DEIMOS_STATIC_RUNTIME ON CACHE BOOL "Link the C++ runtime statically (portable daemon binaries)" FORCE)
+endif()
+
+if(NOT DEIMOS_BUILD_DAEMON AND NOT DEIMOS_BUILD_CLI AND NOT DEIMOS_BUILD_UI)
+    message(FATAL_ERROR "Nothing to build: enable at least one of DEIMOS_BUILD_DAEMON, DEIMOS_BUILD_CLI, DEIMOS_BUILD_UI.")
+endif()
+
+if(NOT DEIMOS_BUILD_DAEMON AND (DEIMOS_BUILD_CLI OR DEIMOS_BUILD_UI))
+    message(WARNING "The daemon is disabled: deimos will only be able to talk to remote daemons.")
+endif()
+
+set(DEIMOS_VERSION_TAGGED "${PROJECT_VERSION}${DEIMOS_VERSION_SUFFIX}")
