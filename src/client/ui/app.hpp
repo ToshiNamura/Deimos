@@ -130,14 +130,12 @@ private:
     std::vector<EndpointRecord> endpoints_;
     std::string currentEndpoint_;
     ProfileEditor editor_;
-    std::string previewProfileId_;
     std::vector<std::string> previewCommands_;
     std::string previewDiagnostics_;
     std::deque<Toast> toasts_;
     std::string busyLabel_;
     int pendingActions_ = 0;
     bool showPreview_ = false;
-    bool confirmDelete_ = false;
 
     /// Bumped whenever a background action replaces editor_, so the view does not
     /// copy its stale frame back over the fresh data.

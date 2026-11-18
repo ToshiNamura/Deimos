@@ -421,11 +421,18 @@ void App::renderProfiles()
     ImGui::SameLine();
     if (secondaryButton("Preview command"))
     {
+        if (editor.isNew)
         {
-            std::lock_guard<std::mutex> lock(mutex_);
-            editor_ = editor;
+            toast("save the profile before previewing the command line", true);
         }
-        requestPreview(editor.originalId.empty() ? editor.profile.id : editor.originalId);
+        else
+        {
+            {
+                std::lock_guard<std::mutex> lock(mutex_);
+                editor_ = editor;
+            }
+            requestPreview(editor.originalId.empty() ? editor.profile.id : editor.originalId);
+        }
     }
     ImGui::SameLine();
     if (!editor.isNew && dangerButton("Delete"))

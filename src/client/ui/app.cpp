@@ -733,7 +733,6 @@ void App::requestPreview(const std::string& profileId)
                  }
 
                  std::lock_guard<std::mutex> lock(mutex_);
-                 previewProfileId_ = profileId;
                  previewCommands_ = preview.value().commands;
                  previewDiagnostics_ = strings::trim(diagnostics);
                  showPreview_ = true;

@@ -156,24 +156,4 @@ private:
     std::variant<T, Error> storage_;
 };
 
-namespace detail
-{
-
-inline Status toStatus(Status status)
-{
-    return status;
-}
-
-template <typename T>
-Status toStatus(const Result<T>& result)
-{
-    if (result.hasValue())
-    {
-        return Status::ok();
-    }
-    return Status{result.error()};
-}
-
-} // namespace detail
-
 }
