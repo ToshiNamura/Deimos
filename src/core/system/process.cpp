@@ -10,8 +10,10 @@
 #ifdef _WIN32
 #include <windows.h>
 #else
-#include <fcntl.h>
+#include <cerrno>
 #include <csignal>
+#include <cstring>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -367,10 +369,15 @@ Status Process::start(const ProcessOptions& options, OutputCallback onOutput)
 
     int stdoutPipe[2] = {-1, -1};
     int stderrPipe[2] = {-1, -1};
-    if (pipe(stdoutPipe) != 0 || pipe(stderrPipe) != 0)
+    int execPipe[2] = {-1, -1};
+    if (pipe(stdoutPipe) != 0 || pipe(stderrPipe) != 0 || pipe(execPipe) != 0)
     {
         return Status::failure(ErrorCode::internal, "cannot create pipes for the child process");
     }
+
+    // The child reports a failed exec through execPipe. FD_CLOEXEC closes the write end
+    // on a successful exec, so the parent sees end-of-file exactly when the child starts.
+    fcntl(execPipe[1], F_SETFD, FD_CLOEXEC);
 
     const pid_t childPid = fork();
     if (childPid < 0)
@@ -378,15 +385,20 @@ Status Process::start(const ProcessOptions& options, OutputCallback onOutput)
         return Status::failure(ErrorCode::internal, "cannot fork");
     }
 
+    const auto reportExecFailure = [execPipe](int errorCode)
+    {
+        const ssize_t written = ::write(execPipe[1], &errorCode, sizeof(errorCode));
+        (void)written;
+    };
+
     if (childPid == 0)
     {
+        close(execPipe[0]);
         setpgid(0, 0);
-        if (!options.workingDirectory.empty())
+        if (!options.workingDirectory.empty() && chdir(options.workingDirectory.c_str()) != 0)
         {
-            if (chdir(options.workingDirectory.c_str()) != 0)
-            {
-                _exit(126);
-            }
+            reportExecFailure(errno);
+            _exit(126);
         }
         dup2(stdoutPipe[1], STDOUT_FILENO);
         dup2(stderrPipe[1], STDERR_FILENO);
@@ -405,12 +417,28 @@ Status Process::start(const ProcessOptions& options, OutputCallback onOutput)
         argv.push_back(nullptr);
 
         execvp(options.executable.c_str(), argv.data());
+        reportExecFailure(errno);
         _exit(127);
     }
 
     setpgid(childPid, childPid);
     close(stdoutPipe[1]);
     close(stderrPipe[1]);
+    close(execPipe[1]);
+
+    int execError = 0;
+    const ssize_t execRead = ::read(execPipe[0], &execError, sizeof(execError));
+    close(execPipe[0]);
+    if (execRead > 0)
+    {
+        int childStatus = 0;
+        waitpid(childPid, &childStatus, 0);
+        close(stdoutPipe[0]);
+        close(stderrPipe[0]);
+        return Status::failure(ErrorCode::io,
+                               "cannot start '" + options.executable + "'",
+                               std::strerror(execError));
+    }
 
     impl_->childPid = childPid;
     impl_->pid = static_cast<std::uint64_t>(childPid);
