@@ -16,16 +16,6 @@ bool hasArgument(const std::vector<std::string>& arguments, const std::string& e
     return std::find(arguments.begin(), arguments.end(), expected) != arguments.end();
 }
 
-bool hasArgumentStartingWith(const std::vector<std::string>& arguments, const std::string& prefix)
-{
-    return std::any_of(arguments.begin(),
-                       arguments.end(),
-                       [&prefix](const std::string& argument)
-                       {
-                           return argument.rfind(prefix, 0) == 0;
-                       });
-}
-
 DesyncRound tlsSplitRound()
 {
     DesyncRound round;
