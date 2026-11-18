@@ -351,6 +351,11 @@ Status uninstall(const std::string& serviceName, std::string& message)
 
 #else
 
+static int runCommand(const std::string& command)
+{
+    return std::system(command.c_str());
+}
+
 bool isRunningAsService()
 {
     return false;
@@ -401,7 +406,7 @@ Status install(const InstallOptions& options, std::string& message)
     const std::string startCommand = "systemctl start " + options.serviceName;
 #endif
 
-    if (std::system(registerCommand.c_str()) != 0)
+    if (runCommand(registerCommand) != 0)
     {
         message = "service definition written to " + path + " but the init system reported an error";
         return Status::failure(ErrorCode::io, "cannot register the service with the init system", registerCommand);
@@ -409,7 +414,7 @@ Status install(const InstallOptions& options, std::string& message)
 
     if (options.startImmediately)
     {
-        std::system(startCommand.c_str());
+        runCommand(startCommand);
     }
 
     message = "service installed at " + path;
@@ -428,14 +433,14 @@ Status uninstall(const std::string& serviceName, std::string& message)
     }
 
 #if defined(__APPLE__)
-    std::system("launchctl unload -w /Library/LaunchDaemons/com.deimos.daemon.plist 2>/dev/null");
+    runCommand("launchctl unload -w /Library/LaunchDaemons/com.deimos.daemon.plist 2>/dev/null");
     std::error_code code;
     std::filesystem::remove("/Library/LaunchDaemons/com.deimos.daemon.plist", code);
 #else
-    std::system((std::string{"systemctl disable --now "} + serviceName + " >/dev/null 2>&1").c_str());
+    runCommand(std::string{"systemctl disable --now "} + serviceName + " >/dev/null 2>&1");
     std::error_code code;
     std::filesystem::remove("/etc/systemd/system/" + serviceName + ".service", code);
-    std::system("systemctl daemon-reload");
+    runCommand("systemctl daemon-reload");
 #endif
 
     message = "service '" + serviceName + "' removed";

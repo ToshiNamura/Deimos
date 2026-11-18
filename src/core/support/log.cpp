@@ -334,7 +334,8 @@ std::string formatTimestamp(const std::chrono::system_clock::time_point& timePoi
     gmtime_r(&seconds, &utc);
 #endif
 
-    char buffer[40];
+    // Sized for the worst case of every numeric field rendering as a full int.
+    char buffer[96];
     std::snprintf(buffer,
                   sizeof(buffer),
                   "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ",
