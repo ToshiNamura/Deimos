@@ -336,16 +336,29 @@ std::string formatTimestamp(const std::chrono::system_clock::time_point& timePoi
 
     // Sized for the worst case of every numeric field rendering as a full int.
     char buffer[96];
+    // Clamped to the calendar range so the compiler can prove the format below
+    // cannot truncate the buffer (-Wformat-truncation under -Werror).
+    const auto bounded = [](int value, int minimum, int maximum)
+    {
+        return value < minimum ? minimum : (value > maximum ? maximum : value);
+    };
+    const int year = bounded(utc.tm_year + 1900, 0, 9999);
+    const int month = bounded(utc.tm_mon + 1, 1, 12);
+    const int day = bounded(utc.tm_mday, 1, 31);
+    const int hour = bounded(utc.tm_hour, 0, 23);
+    const int minute = bounded(utc.tm_min, 0, 59);
+    const int second = bounded(utc.tm_sec, 0, 60);
+    const int millisecond = bounded(static_cast<int>(millis.count() % 1000), 0, 999);
     std::snprintf(buffer,
                   sizeof(buffer),
                   "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ",
-                  utc.tm_year + 1900,
-                  utc.tm_mon + 1,
-                  utc.tm_mday,
-                  utc.tm_hour,
-                  utc.tm_min,
-                  utc.tm_sec,
-                  static_cast<int>(millis.count() % 1000));
+                  year,
+                  month,
+                  day,
+                  hour,
+                  minute,
+                  second,
+                  millisecond);
     return std::string{buffer};
 }
 
