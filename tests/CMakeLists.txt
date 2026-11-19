@@ -10,6 +10,7 @@ add_executable(deimos_tests
     test_api.cpp
     test_command_builder.cpp
     test_config.cpp
+    test_i18n.cpp
     test_process.cpp
     test_protocol.cpp)
 

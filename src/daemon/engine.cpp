@@ -2,6 +2,8 @@
 
 #include <utility>
 
+#include <deimos/support/i18n.hpp>
+#include <deimos/support/labels.hpp>
 #include <deimos/support/log.hpp>
 #include <deimos/support/strings.hpp>
 
@@ -12,7 +14,7 @@ namespace
 
 std::string profileLabel(const Profile& profile)
 {
-    return profile.id.empty() ? std::string{"<unnamed>"} : profile.id;
+    return profile.id.empty() ? std::string{i18n::tr("profile.unnamed")} : profile.id;
 }
 
 } // namespace
@@ -32,7 +34,7 @@ Status RuntimeEngine::updateContext(const EngineContext& context)
     std::lock_guard<std::mutex> lock(mutex_);
     if (state_ != EngineState::stopped)
     {
-        return Status::failure(ErrorCode::conflict, "stop the engine before changing its context");
+        return Status::failure(ErrorCode::conflict, i18n::tr("err.engine.contextBusy"));
     }
     context_ = context;
     return Status::ok();
@@ -45,7 +47,8 @@ Result<EngineSnapshot> RuntimeEngine::start(const Profile& profile)
     if (state_ != EngineState::stopped && state_ != EngineState::faulted)
     {
         return Result<EngineSnapshot>{
-            Error{ErrorCode::conflict, "engine is already " + std::string{toString(state_)}}};
+            Error{ErrorCode::conflict,
+                  i18n::tr("err.engine.alreadyInState", {std::string{labels::engineState(state_)}})}};
     }
 
     ToolKind tool = profile.tool;
@@ -58,8 +61,8 @@ Result<EngineSnapshot> RuntimeEngine::start(const Profile& profile)
     {
         return Result<EngineSnapshot>{
             Error{ErrorCode::notFound,
-                  "zapret '" + std::string{toCliToken(tool)} + "' is not available on this daemon",
-                  "install zapret or point zapret.installDirectory at it"}};
+                  i18n::tr("err.engine.toolUnavailable", {std::string{toCliToken(tool)}}),
+                  i18n::tr("err.engine.toolUnavailableHint")}};
     }
 
     const std::string workingDirectory =
@@ -70,7 +73,7 @@ Result<EngineSnapshot> RuntimeEngine::start(const Profile& profile)
     if (build.hasErrors())
     {
         state_ = EngineState::faulted;
-        lastError_ = "profile " + profileLabel(profile) + " cannot be started";
+        lastError_ = i18n::tr("err.engine.noProfile", {profileLabel(profile)});
         const std::string report = formatDiagnostics(build.diagnostics);
         log::error("engine", lastError_ + "\n" + report);
         return Result<EngineSnapshot>{
@@ -104,8 +107,10 @@ Result<EngineSnapshot> RuntimeEngine::start(const Profile& profile)
     monitor_ = std::thread(&RuntimeEngine::monitorLoop, this);
 
     log::info("engine",
-              "profile '" + profileLabel(profile) + "' started with " + std::to_string(build.launches.size()) +
-                  " process(es) using " + std::string{toCliToken(tool)});
+              i18n::tr("log.engine.started",
+                       {profileLabel(profile),
+                        std::to_string(build.launches.size()),
+                        std::string{toCliToken(tool)}}));
     return Result<EngineSnapshot>{snapshotLocked()};
 }
 
@@ -142,7 +147,7 @@ Status RuntimeEngine::stop()
         std::lock_guard<std::mutex> outputLock(outputMutex_);
         partialOutput_.clear();
     }
-    log::info("engine", "engine stopped");
+    log::info("engine", i18n::tr("log.engine.stopped"));
     return Status::ok();
 }
 
@@ -226,7 +231,7 @@ Status RuntimeEngine::spawnLocked(const std::vector<LaunchSpec>& launches)
         launches_.push_back(std::move(info));
         processes_.push_back(std::move(process));
 
-        log::info("engine", "spawned " + launch.renderCommandLine());
+        log::info("engine", i18n::tr("log.engine.spawned", {launch.renderCommandLine()}));
     }
 
     return Status::ok();
@@ -325,8 +330,7 @@ void RuntimeEngine::monitorLoop()
         if (!canRestart)
         {
             std::lock_guard<std::mutex> lock(mutex_);
-            lastError_ =
-                "zapret process '" + failedLabel + "' exited with code " + std::to_string(failedCode);
+            lastError_ = i18n::tr("log.engine.processExited", {failedLabel, std::to_string(failedCode)});
             state_ = EngineState::faulted;
             log::error("engine", lastError_);
             shutdownProcessesLocked();
@@ -339,9 +343,11 @@ void RuntimeEngine::monitorLoop()
             attempt = ++restartCount_;
         }
         log::warning("engine",
-                     "zapret process '" + failedLabel + "' exited with code " + std::to_string(failedCode) +
-                         "; restarting (attempt " + std::to_string(attempt) + " of " +
-                         std::to_string(settings.maxRestarts) + ")");
+                     i18n::tr("log.engine.restarting",
+                              {failedLabel,
+                               std::to_string(failedCode),
+                               std::to_string(attempt),
+                               std::to_string(settings.maxRestarts)}));
 
         for (int tick = 0; tick < settings.restartBackoffMs / 50 + 1 && !stopping_.load(); ++tick)
         {
@@ -361,7 +367,7 @@ void RuntimeEngine::monitorLoop()
         {
             lastError_ = status.error().describe();
             state_ = EngineState::faulted;
-            log::error("engine", "restart failed: " + lastError_);
+            log::error("engine", i18n::tr("log.engine.restartFailed", {lastError_}));
             shutdownProcessesLocked();
             return;
         }

@@ -7,6 +7,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include <deimos/support/i18n.hpp>
+#include <deimos/support/labels.hpp>
 #include <deimos/support/log.hpp>
 #include <deimos/support/platform.hpp>
 #include <deimos/support/strings.hpp>
@@ -17,10 +19,13 @@
 
 namespace deimos::ui
 {
+using i18n::tr;
+
 namespace
 {
 
 constexpr float SIDEBAR_WIDTH = 236.0f;
+constexpr const char* APP_NAME = "Deimos";
 
 std::filesystem::path statePath()
 {
@@ -54,18 +59,18 @@ ImU32 stateColor(EngineState state)
     return palette().textMuted;
 }
 
-const char* titleFor(int view)
+const std::string& titleFor(int view)
 {
     switch (static_cast<int>(view))
     {
     case 0:
-        return "Dashboard";
+        return tr("ui.title.dashboard");
     case 1:
-        return "Profiles";
+        return tr("ui.title.profiles");
     case 2:
-        return "Daemons";
+        return tr("ui.title.daemons");
     default:
-        return "Logs";
+        return tr("ui.title.logs");
     }
 }
 
@@ -180,6 +185,7 @@ void App::loadState()
 {
     std::vector<EndpointRecord> endpoints;
     std::string current;
+    std::string language{"auto"};
 
     const auto content = platform::readFile(statePath());
     if (content.has_value())
@@ -188,6 +194,7 @@ void App::loadState()
         {
             const auto root = nlohmann::json::parse(*content);
             current = root.value("current", std::string{});
+            language = root.value("language", std::string{"auto"});
             refreshSeconds_.store(root.value("refreshSeconds", 2));
             const auto list = root.find("endpoints");
             if (list != root.end() && list->is_array())
@@ -231,6 +238,8 @@ void App::loadState()
     std::lock_guard<std::mutex> lock(mutex_);
     endpoints_ = std::move(endpoints);
     currentEndpoint_ = std::move(current);
+    languageSetting_ = languageOverride_.empty() ? std::move(language) : languageOverride_;
+    i18n::setLanguageByCode(languageSetting_);
     newEndpoint_.name = "remote";
     newEndpoint_.url = "http://192.168.1.1:8787";
 
@@ -243,11 +252,13 @@ void App::persistState()
 {
     std::vector<EndpointRecord> endpoints;
     std::string current;
+    std::string language;
     int refreshSeconds = 2;
     {
         std::lock_guard<std::mutex> lock(mutex_);
         endpoints = endpoints_;
         current = currentEndpoint_;
+        language = languageSetting_;
         refreshSeconds = refreshSeconds_.load();
     }
 
@@ -270,6 +281,7 @@ void App::persistState()
 
     nlohmann::json root;
     root["current"] = current;
+    root["language"] = language;
     root["refreshSeconds"] = refreshSeconds;
     root["endpoints"] = std::move(list);
 
@@ -277,7 +289,7 @@ void App::persistState()
     std::string errorMessage;
     if (!platform::writeFileAtomically(statePath(), root.dump(2) + "\n", errorMessage))
     {
-        log::warning("ui", "cannot save " + statePath().string() + ": " + errorMessage);
+        log::warning("ui", i18n::tr("log.ui.saveFailed", {statePath().string(), errorMessage}));
     }
     platform::restrictFilePermissions(statePath());
 }
@@ -317,6 +329,21 @@ void App::selectEndpoint(const std::string& name)
     }
     persistState();
     refreshRequested_.store(true);
+}
+
+void App::setLanguageOverride(std::string code)
+{
+    languageOverride_ = std::move(code);
+}
+
+void App::setLanguageSetting(const std::string& code)
+{
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        languageSetting_ = code;
+    }
+    i18n::setLanguageByCode(code);
+    persistState();
 }
 
 DaemonClient App::makeClient() const
@@ -447,78 +474,78 @@ std::string App::busyLabel() const
 
 void App::startEngine(const std::string& profileId)
 {
-    runAsync("starting engine",
+    runAsync(tr("ui.busy.starting"),
              [this, profileId]
              {
                  DaemonClient client = makeClient();
                  const auto result = client.startEngine(profileId);
                  if (!result)
                  {
-                     toast("start failed: " + result.error().describe(), true);
+                     toast(tr("ui.toast.startFailed", {result.error().describe()}), true);
                      return;
                  }
-                 toast("engine " + std::string{toString(result.value().state)}, false);
+                 toast(tr("ui.toast.engineState", {std::string{labels::engineState(result.value().state)}}), false);
              });
 }
 
 void App::stopEngine()
 {
-    runAsync("stopping engine",
+    runAsync(tr("ui.busy.stopping"),
              [this]
              {
                  DaemonClient client = makeClient();
                  const auto result = client.stopEngine();
                  if (!result)
                  {
-                     toast("stop failed: " + result.error().describe(), true);
+                     toast(tr("ui.toast.stopFailed", {result.error().describe()}), true);
                      return;
                  }
-                 toast("engine stopped", false);
+                 toast(tr("ui.toast.stopped"), false);
              });
 }
 
 void App::restartEngine()
 {
-    runAsync("restarting engine",
+    runAsync(tr("ui.busy.restarting"),
              [this]
              {
                  DaemonClient client = makeClient();
                  const auto result = client.restartEngine();
                  if (!result)
                  {
-                     toast("restart failed: " + result.error().describe(), true);
+                     toast(tr("ui.toast.restartFailed", {result.error().describe()}), true);
                      return;
                  }
-                 toast("engine restarted", false);
+                 toast(tr("ui.toast.restarted"), false);
              });
 }
 
 void App::activateProfile(const std::string& profileId)
 {
-    runAsync("activating profile",
+    runAsync(tr("ui.busy.activating"),
              [this, profileId]
              {
                  DaemonClient client = makeClient();
                  const auto result = client.activateProfile(profileId);
                  if (!result)
                  {
-                     toast("activate failed: " + result.error().describe(), true);
+                     toast(tr("ui.toast.activateFailed", {result.error().describe()}), true);
                      return;
                  }
-                 toast("profile '" + profileId + "' is now active", false);
+                 toast(tr("ui.toast.activated", {profileId}), false);
              });
 }
 
 void App::deleteProfile(const std::string& profileId)
 {
-    runAsync("deleting profile",
+    runAsync(tr("ui.busy.deleting"),
              [this, profileId]
              {
                  DaemonClient client = makeClient();
                  const Status status = client.deleteProfile(profileId);
                  if (!status.isOk())
                  {
-                     toast("delete failed: " + status.error().describe(), true);
+                     toast(tr("ui.toast.deleteFailed", {status.error().describe()}), true);
                      return;
                  }
                  {
@@ -529,20 +556,20 @@ void App::deleteProfile(const std::string& profileId)
                          ++editorGeneration_;
                      }
                  }
-                 toast("profile '" + profileId + "' deleted", false);
+                 toast(tr("ui.toast.deleted", {profileId}), false);
              });
 }
 
 void App::openProfile(const std::string& profileId)
 {
-    runAsync("loading profile",
+    runAsync(tr("ui.busy.loading"),
              [this, profileId]
              {
                  DaemonClient client = makeClient();
                  const auto profile = client.getProfile(profileId);
                  if (!profile)
                  {
-                     toast("cannot load profile: " + profile.error().describe(), true);
+                     toast(tr("ui.toast.loadFailed", {profile.error().describe()}), true);
                      return;
                  }
 
@@ -665,14 +692,14 @@ void App::saveEditorProfile()
         editor_.profile = profile;
     }
 
-    runAsync("saving profile",
+    runAsync(tr("ui.busy.saving"),
              [this, profile]
              {
                  DaemonClient client = makeClient();
                  const auto saved = client.saveProfile(profile);
                  if (!saved)
                  {
-                     toast("save failed: " + saved.error().describe(), true);
+                     toast(tr("ui.toast.saveFailed", {saved.error().describe()}), true);
                      return;
                  }
                  {
@@ -681,7 +708,7 @@ void App::saveEditorProfile()
                      editor_.isNew = false;
                      ++editorGeneration_;
                  }
-                 toast("profile '" + saved.value().id + "' saved", false);
+                 toast(tr("ui.toast.saved", {saved.value().id}), false);
              });
 }
 
@@ -689,17 +716,17 @@ void App::requestPreview(const std::string& profileId)
 {
     if (profileId.empty())
     {
-        toast("save the profile before previewing it", true);
+        toast(tr("ui.toast.previewFirst"), true);
         return;
     }
-    runAsync("building command preview",
+    runAsync(tr("ui.busy.preview"),
              [this, profileId]
              {
                  DaemonClient client = makeClient();
                  const auto preview = client.previewProfile(profileId);
                  if (!preview)
                  {
-                     toast("preview failed: " + preview.error().describe(), true);
+                     toast(tr("ui.toast.previewFailed", {preview.error().describe()}), true);
                      return;
                  }
 
@@ -718,28 +745,30 @@ void App::requestPreview(const std::string& profileId)
 
 void App::runDoctor()
 {
-    runAsync("running diagnostics",
+    runAsync(tr("ui.busy.diagnose"),
              [this]
              {
                  DaemonClient client = makeClient();
                  const auto health = client.health();
                  if (!health)
                  {
-                     toast("daemon unreachable: " + health.error().describe(), true);
+                     toast(tr("ui.toast.daemonUnreachable", {health.error().describe()}), true);
                      return;
                  }
                  const auto zapret = client.zapret();
                  if (!zapret)
                  {
-                     toast("zapret check failed: " + zapret.error().describe(), true);
+                     toast(tr("ui.toast.zapretCheckFailed", {zapret.error().describe()}), true);
                      return;
                  }
                  if (!zapret.value().available)
                  {
-                     toast("zapret is not detected by the daemon", true);
+                     toast(tr("ui.toast.zapretMissing"), true);
                      return;
                  }
-                 toast("ok: daemon " + health.value().version + ", zapret " + strings::join(zapret.value().tools, ", "), false);
+                 toast(tr("ui.toast.diagnoseOk",
+                          {health.value().version, strings::join(zapret.value().tools, ", ")}),
+                       false);
              });
 }
 
@@ -812,23 +841,26 @@ void App::renderSidebar()
     ImGui::SameLine(46.0f);
     ImGui::BeginGroup();
     pushFont(fontHeading());
-    ImGui::TextUnformatted("Deimos");
+    ImGui::TextUnformatted(APP_NAME);
     popFont();
-    mutedText("DPI control plane");
+    mutedText(tr("ui.app.tagline").c_str());
     ImGui::EndGroup();
 
     spacer(28.0f);
 
     const std::pair<const char*, Icon> items[] = {
-        {"Dashboard", Icon::dashboard},
-        {"Profiles", Icon::profiles},
-        {"Daemons", Icon::server},
-        {"Logs", Icon::logs},
+        {tr("ui.nav.dashboard").c_str(), Icon::dashboard},
+        {tr("ui.nav.profiles").c_str(), Icon::profiles},
+        {tr("ui.nav.daemons").c_str(), Icon::server},
+        {tr("ui.nav.logs").c_str(), Icon::logs},
     };
 
+    const float footerHeight = 140.0f;
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 6.0f));
     ImGui::SetCursorPosX(12.0f);
-    ImGui::BeginChild("##nav", ImVec2(SIDEBAR_WIDTH - 12.0f, 0.0f));
+    // Bounded height: a full-height child would sit on top of the footer row and swallow its clicks.
+    const float navHeight = std::max(0.0f, ImGui::GetContentRegionAvail().y - footerHeight);
+    ImGui::BeginChild("##nav", ImVec2(SIDEBAR_WIDTH - 12.0f, navHeight));
     for (int index = 0; index < 4; ++index)
     {
         const bool selected = static_cast<int>(view_) == index;
@@ -840,29 +872,52 @@ void App::renderSidebar()
     ImGui::EndChild();
     ImGui::PopStyleVar();
 
-    const float footerHeight = 96.0f;
     const float y = ImGui::GetWindowHeight() - footerHeight;
     if (y > 0.0f)
     {
-        ImGui::SetCursorPos(ImVec2(16.0f, y));
+        ImGui::SetCursorPos(ImVec2(12.0f, y));
+        ImGui::BeginChild("##footer", ImVec2(SIDEBAR_WIDTH - 12.0f, footerHeight));
+
+        ImGui::SetCursorPos(ImVec2(4.0f, 2.0f));
+
+        const char* languageCodes[] = {"auto", "en", "ru"};
+        const char* languageLabels[] = {
+            tr("ui.language.auto").c_str(), tr("ui.language.en").c_str(), tr("ui.language.ru").c_str()};
+        for (int index = 0; index < 3; ++index)
+        {
+            const ImVec2 buttonSize(66.0f, 26.0f);
+            const bool selected = languageSetting_ == languageCodes[index];
+            const bool clicked = selected ? primaryButton(languageLabels[index], buttonSize)
+                                          : secondaryButton(languageLabels[index], buttonSize);
+            if (clicked)
+            {
+                setLanguageSetting(languageCodes[index]);
+            }
+            if (index < 2)
+            {
+                ImGui::SameLine();
+            }
+        }
+
+        ImGui::SetCursorPos(ImVec2(4.0f, 42.0f));
         const UiSnapshot current = snapshot();
         const ImU32 color = current.connected ? colors.success : colors.danger;
 
         ImDrawList* footerDraw = ImGui::GetWindowDrawList();
         const ImVec2 position = ImGui::GetCursorScreenPos();
         footerDraw->AddRectFilled(position,
-                                  ImVec2(position.x + SIDEBAR_WIDTH - 32.0f, position.y + 74.0f),
+                                  ImVec2(position.x + SIDEBAR_WIDTH - 40.0f, position.y + 74.0f),
                                   colors.panel,
                                   12.0f);
         footerDraw->AddCircleFilled(ImVec2(position.x + 18.0f, position.y + 22.0f), 4.0f, color);
         footerDraw->AddText(ImVec2(position.x + 32.0f, position.y + 14.0f),
                             colors.text,
-                            current.connected ? "Connected" : "Disconnected");
+                            tr(current.connected ? "ui.status.connected" : "ui.status.disconnected").c_str());
         const std::string endpointText = activeEndpoint().url;
         footerDraw->AddText(ImVec2(position.x + 18.0f, position.y + 40.0f), colors.textMuted, endpointText.c_str());
         if (!current.connected)
         {
-            const std::string reason = current.error.empty() ? "daemon not reachable" : current.error;
+            const std::string reason = current.error.empty() ? tr("ui.status.unreachable") : current.error;
             footerDraw->AddText(ImVec2(position.x + 18.0f, position.y + 56.0f), colors.danger, reason.c_str());
         }
         else
@@ -871,7 +926,8 @@ void App::renderSidebar()
                                 colors.textMuted,
                                 current.info.hostname.c_str());
         }
-        ImGui::Dummy(ImVec2(SIDEBAR_WIDTH - 32.0f, 74.0f));
+        ImGui::Dummy(ImVec2(SIDEBAR_WIDTH - 40.0f, 74.0f));
+        ImGui::EndChild();
     }
 }
 
@@ -883,25 +939,24 @@ void App::renderTopBar()
     ImGui::SetCursorPos(ImVec2(30.0f, 26.0f));
     ImGui::BeginGroup();
     pushFont(fontHeading());
-    ImGui::TextUnformatted(titleFor(static_cast<int>(view_)));
+    ImGui::TextUnformatted(titleFor(static_cast<int>(view_)).c_str());
     popFont();
     ImGui::EndGroup();
 
-    if (view_ == View::dashboard)
+    switch (view_)
     {
-        mutedText("Live state of the selected daemon");
-    }
-    else if (view_ == View::profiles)
-    {
-        mutedText("Desync strategies mapped onto zapret command lines");
-    }
-    else if (view_ == View::daemons)
-    {
-        mutedText("Local and remote daemons controlled by this client");
-    }
-    else
-    {
-        mutedText("Daemon log stream");
+    case View::dashboard:
+        mutedText(tr("ui.subtitle.dashboard").c_str());
+        break;
+    case View::profiles:
+        mutedText(tr("ui.subtitle.profiles").c_str());
+        break;
+    case View::daemons:
+        mutedText(tr("ui.subtitle.daemons").c_str());
+        break;
+    case View::logs:
+        mutedText(tr("ui.subtitle.logs").c_str());
+        break;
     }
 
     const float rightEdge = ImGui::GetWindowWidth() - 30.0f;
@@ -915,18 +970,19 @@ void App::renderTopBar()
         }
         else
         {
-            mutedText(current.connected ? "synced" : "offline");
+            mutedText(tr(current.connected ? "ui.status.synced" : "ui.status.offline").c_str());
         }
     }
     ImGui::EndGroup();
 
     ImGui::SameLine(rightEdge - 120.0f);
-    if (iconButton("##refresh", Icon::refresh, "Refresh now"))
+    if (iconButton("##refresh", Icon::refresh, tr("ui.action.refreshNow").c_str()))
     {
         refreshNow();
     }
-    ImGui::SameLine();
-    const std::string stateLabel{toString(current.info.engine.state)};
+    const std::string stateLabel{labels::engineState(current.info.engine.state)};
+    const float stateWidth = ImGui::CalcTextSize(stateLabel.c_str()).x + 22.0f;
+    ImGui::SameLine(rightEdge - stateWidth, 0.0f);
     pill(stateLabel.c_str(), stateColor(current.info.engine.state));
 
     spacer(18.0f);

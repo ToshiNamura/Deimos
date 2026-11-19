@@ -10,6 +10,8 @@
 #include "service.hpp"
 
 #include <deimos/model/config.hpp>
+#include <deimos/support/i18n.hpp>
+#include <deimos/support/labels.hpp>
 #include <deimos/support/platform.hpp>
 #include <deimos/support/strings.hpp>
 #include <deimos/version.hpp>
@@ -49,28 +51,60 @@ extern "C" void signalHandler(int)
 
 void printUsage()
 {
-    std::cout << R"(Deimos daemon - edits outgoing traffic with zapret under remote control
+    struct OptionHelp
+    {
+        const char* flag;
+        const char* key;
+    };
 
-Usage: deimosd [options]
+    static const OptionHelp OPTIONS[] = {
+        {"  --config PATH            ", "daemon.usage.config"},
+        {"  --listen ADDRESS         ", "daemon.usage.listen"},
+        {"  --port PORT              ", "daemon.usage.port"},
+        {"  --log-level LEVEL        ", "daemon.usage.logLevel"},
+        {"  --lang LANG              ", "daemon.usage.lang"},
+        {"  --foreground             ", "daemon.usage.foreground"},
+        {"  --service-run            ", "daemon.usage.serviceRun"},
+        {"  --service-name NAME      ", "daemon.usage.serviceName"},
+        {"  --install-service        ", "daemon.usage.installService"},
+        {"  --uninstall-service      ", "daemon.usage.uninstallService"},
+        {"  --print-unit             ", "daemon.usage.printUnit"},
+        {"  --print-plist            ", "daemon.usage.printPlist"},
+        {"  --generate-token         ", "daemon.usage.generateToken"},
+        {"  --token-file PATH        ", "daemon.usage.tokenFile"},
+        {"  --validate-config        ", "daemon.usage.validateConfig"},
+        {"  --version                ", "daemon.usage.version"},
+        {"  --help                   ", "daemon.usage.help"},
+    };
 
-Options:
-  --config PATH            Configuration file (default: platform config directory)
-  --listen ADDRESS         Override daemon.listenAddress
-  --port PORT              Override daemon.port
-  --log-level LEVEL        Override daemon.logLevel (trace|debug|info|warn|error)
-  --foreground             Stay attached to the console (default when not a service)
-  --service-run            Internal flag used by the platform service definition
-  --service-name NAME      Service name for install/uninstall (default: deimosd)
-  --install-service        Install and start the platform service
-  --uninstall-service      Remove the platform service
-  --print-unit             Print the systemd unit to stdout and exit
-  --print-plist            Print the launchd plist to stdout and exit
-  --generate-token         Create a new API token, print it once and exit
-  --token-file PATH        Token file used with --generate-token
-  --validate-config        Validate the configuration and exit
-  --version                Print the version and exit
-  --help                   Print this help and exit
-)";
+    std::cout << deimos::i18n::tr("daemon.usage.title") << "\n\n"
+              << deimos::i18n::tr("daemon.usage.synopsis") << "\n\n"
+              << deimos::i18n::tr("daemon.usage.options") << "\n";
+    for (const OptionHelp& option : OPTIONS)
+    {
+        std::cout << option.flag << deimos::i18n::tr(option.key) << "\n";
+    }
+    std::cout << std::flush;
+}
+
+void applyLanguageFromArguments(int argc, char** argv)
+{
+    deimos::i18n::setLanguage(deimos::i18n::Language::system);
+    const std::string prefix{"--lang="};
+    for (int index = 1; index < argc; ++index)
+    {
+        const std::string argument = argv[index];
+        if (argument == "--lang" && index + 1 < argc)
+        {
+            deimos::i18n::setLanguageByCode(argv[index + 1]);
+            return;
+        }
+        if (argument.compare(0, prefix.size(), prefix) == 0)
+        {
+            deimos::i18n::setLanguageByCode(argument.substr(prefix.size()));
+            return;
+        }
+    }
 }
 
 struct CommandLine
@@ -116,7 +150,7 @@ CommandLine parseCommandLine(int argc, char** argv)
                 target = argv[++index];
                 return true;
             }
-            std::cerr << "deimosd: missing value for " << argument << "\n";
+            std::cerr << deimos::i18n::tr("daemon.usage.missingValue", {argument}) << "\n";
             parsed.valid = false;
             return false;
         };
@@ -141,7 +175,7 @@ CommandLine parseCommandLine(int argc, char** argv)
                 }
                 else
                 {
-                    std::cerr << "deimosd: invalid port '" << text << "'\n";
+                    std::cerr << deimos::i18n::tr("daemon.usage.invalidPort", {text}) << "\n";
                     parsed.valid = false;
                 }
             }
@@ -149,6 +183,10 @@ CommandLine parseCommandLine(int argc, char** argv)
         else if (argument == "--log-level")
         {
             value(parsed.daemon.logLevelOverride);
+        }
+        else if (argument == "--lang")
+        {
+            value(parsed.daemon.languageOverride);
         }
         else if (argument == "--service-name")
         {
@@ -200,7 +238,7 @@ CommandLine parseCommandLine(int argc, char** argv)
         }
         else
         {
-            std::cerr << "deimosd: unknown option '" << argument << "'\n";
+            std::cerr << deimos::i18n::tr("daemon.usage.unknownOption", {argument}) << "\n";
             parsed.valid = false;
         }
     }
@@ -241,7 +279,7 @@ int runDaemon(const CommandLine& commandLine, bool serviceMode)
     }
     else
     {
-        std::cout << "deimosd is running. Press Ctrl+C to stop.\n";
+        std::cout << deimos::i18n::tr("daemon.running") << "\n";
         app.waitForStop([] { return g_consoleStop.load(); });
     }
 
@@ -262,11 +300,18 @@ int main(int argc, char** argv)
     std::signal(SIGPIPE, SIG_IGN);
 #endif
 
+    applyLanguageFromArguments(argc, argv);
+
     const CommandLine commandLine = parseCommandLine(argc, argv);
     if (!commandLine.valid)
     {
         printUsage();
         return 2;
+    }
+
+    if (!commandLine.daemon.languageOverride.empty())
+    {
+        deimos::i18n::setLanguageByCode(commandLine.daemon.languageOverride);
     }
 
     if (commandLine.help)
@@ -311,7 +356,7 @@ int main(int argc, char** argv)
             return 1;
         }
         std::cout << token.value() << "\n";
-        std::cerr << "token written to " << store.tokenFile() << "\n";
+        std::cerr << deimos::i18n::tr("daemon.tokenWritten", {store.tokenFile()}) << "\n";
         return 0;
     }
 
@@ -323,7 +368,7 @@ int main(int argc, char** argv)
         const deimos::Status status = store.load(&diagnostics);
         for (const deimos::Diagnostic& diagnostic : diagnostics)
         {
-            std::cout << deimos::toString(diagnostic.severity) << ": " << diagnostic.message;
+            std::cout << deimos::labels::severity(diagnostic.severity) << ": " << diagnostic.message;
             if (!diagnostic.path.empty())
             {
                 std::cout << "  [" << diagnostic.path << "]";
@@ -335,7 +380,7 @@ int main(int argc, char** argv)
             std::cerr << "deimosd: " << status.error().describe() << "\n";
             return 1;
         }
-        std::cout << "configuration is valid\n";
+        std::cout << deimos::i18n::tr("daemon.configValid") << "\n";
         return 0;
     }
 

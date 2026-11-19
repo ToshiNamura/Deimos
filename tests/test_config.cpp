@@ -100,7 +100,7 @@ TEST_CASE("deserializeConfig_RejectsUnknownEnumValue", "[config]")
     bool sawUnknownValue = false;
     for (const Diagnostic& diagnostic : diagnostics)
     {
-        if (diagnostic.code == "config.unknown_value")
+        if (diagnostic.code == "config.value.unknown")
         {
             sawUnknownValue = true;
         }

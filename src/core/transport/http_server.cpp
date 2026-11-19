@@ -7,8 +7,10 @@
 
 #include <httplib.h>
 
+#include <deimos/support/i18n.hpp>
 #include <deimos/support/log.hpp>
 #include <deimos/support/strings.hpp>
+#include <deimos/transport/protocol.hpp>
 
 namespace deimos
 {
@@ -191,7 +193,7 @@ struct HttpServer::Impl
 
         HttpResponse notFound;
         notFound.status = 404;
-        notFound.body = R"({"error":{"code":"not_found","message":"unknown endpoint","detail":""}})";
+        notFound.body = serializeErrorPayload(Error{ErrorCode::notFound, std::string{i18n::tr("api.error.unknownEndpoint")}});
         return notFound;
     }
 
@@ -215,9 +217,10 @@ struct HttpServer::Impl
         catch (const std::exception& exception)
         {
             log::error("http",
-                       std::string{"unhandled exception while serving "} + converted.path + ": " + exception.what());
+                       i18n::tr("log.http.unhandled", {converted.path, exception.what()}));
             result.status = 500;
-            result.body = R"({"error":{"code":"internal_error","message":"unhandled exception","detail":""}})";
+            result.body =
+                serializeErrorPayload(Error{ErrorCode::internal, std::string{i18n::tr("api.error.unhandled")}});
         }
 
         response.status = result.status;
@@ -336,7 +339,7 @@ Status HttpServer::start(std::string_view address, std::uint16_t port)
 {
     if (impl_->running.load())
     {
-        return Status::failure(ErrorCode::conflict, "server is already running");
+        return Status::failure(ErrorCode::conflict, i18n::tr("err.http.alreadyRunning"));
     }
 
     impl_->configure();
@@ -355,7 +358,7 @@ Status HttpServer::startEphemeral(std::string_view address)
 {
     if (impl_->running.load())
     {
-        return Status::failure(ErrorCode::conflict, "server is already running");
+        return Status::failure(ErrorCode::conflict, i18n::tr("err.http.alreadyRunning"));
     }
 
     impl_->configure();

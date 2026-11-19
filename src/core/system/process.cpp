@@ -5,6 +5,7 @@
 #include <mutex>
 #include <thread>
 
+#include <deimos/support/i18n.hpp>
 #include <deimos/support/strings.hpp>
 
 #ifdef _WIN32
@@ -170,7 +171,7 @@ Status Process::start(const ProcessOptions& options, OutputCallback onOutput)
 {
     if (impl_->running.load())
     {
-        return Status::failure(ErrorCode::conflict, "process is already running");
+        return Status::failure(ErrorCode::conflict, i18n::tr("err.process.alreadyRunning"));
     }
 
     impl_->onOutput = std::move(onOutput);
@@ -186,7 +187,7 @@ Status Process::start(const ProcessOptions& options, OutputCallback onOutput)
         closeHandle(stdoutWrite);
         closeHandle(stderrRead);
         closeHandle(stderrWrite);
-        return Status::failure(ErrorCode::internal, "cannot create pipes for the child process");
+        return Status::failure(ErrorCode::internal, i18n::tr("err.process.pipes"));
     }
 
     STARTUPINFOW startupInfo{};
@@ -362,7 +363,7 @@ Status Process::start(const ProcessOptions& options, OutputCallback onOutput)
 {
     if (impl_->running.load())
     {
-        return Status::failure(ErrorCode::conflict, "process is already running");
+        return Status::failure(ErrorCode::conflict, i18n::tr("err.process.alreadyRunning"));
     }
 
     impl_->onOutput = std::move(onOutput);
@@ -372,7 +373,7 @@ Status Process::start(const ProcessOptions& options, OutputCallback onOutput)
     int execPipe[2] = {-1, -1};
     if (pipe(stdoutPipe) != 0 || pipe(stderrPipe) != 0 || pipe(execPipe) != 0)
     {
-        return Status::failure(ErrorCode::internal, "cannot create pipes for the child process");
+        return Status::failure(ErrorCode::internal, i18n::tr("err.process.pipes"));
     }
 
     // The child reports a failed exec through execPipe. FD_CLOEXEC closes the write end
@@ -382,7 +383,7 @@ Status Process::start(const ProcessOptions& options, OutputCallback onOutput)
     const pid_t childPid = fork();
     if (childPid < 0)
     {
-        return Status::failure(ErrorCode::internal, "cannot fork");
+        return Status::failure(ErrorCode::internal, i18n::tr("err.process.fork"));
     }
 
     const auto reportExecFailure = [execPipe](int errorCode)

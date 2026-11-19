@@ -26,7 +26,7 @@ desynchronisation logic.
 
 | Component | Target | Responsibility |
 | --- | --- | --- |
-| `deimos_core` | static library | Configuration model, zapret strategy model and command generation, HTTP transport, daemon client, process supervisor |
+| `deimos_core` | static library | Configuration model, zapret strategy model and command generation, HTTP transport, daemon client, process supervisor, message catalog |
 | `deimos_daemon` | static library | Runtime engine, configuration store, REST API, platform service integration |
 | `deimosd` | executable | Daemon entry point |
 | `deimos` | executable | Single client binary: GUI by default without arguments, CLI with arguments |
@@ -113,6 +113,18 @@ process while its reader thread is mid-write safe.
   reverse proxy or an SSH tunnel instead of exposing it directly.
 - zapret itself needs raw packet access: run the daemon as a service with
   `CAP_NET_ADMIN`/`CAP_NET_RAW` or install the Windows service from an elevated prompt.
+
+## Language and diagnostics
+
+Every message the daemon produces - validation diagnostics, API error payloads and its own
+log lines - is translated. The language comes from `--lang`, `daemon.language` or the
+system UI language; see [Localisation](localization.md). The catalog lives in
+`src/core/support/i18n_catalog.inc` and is compiled into both binaries, so a daemon on a
+router and the client on a desktop share the same strings without shipping data files.
+
+The client keeps its own language: a Russian `deimos` talking to an English `deimosd`
+renders its interface in Russian and shows the daemon's messages in English. Set
+`daemon.language` on the daemon if a single language is required end to end.
 
 ## Why not link against zapret?
 

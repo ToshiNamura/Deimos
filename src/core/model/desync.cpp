@@ -4,6 +4,7 @@
 #include <array>
 
 #include <deimos/model/diagnostic.hpp>
+#include <deimos/model/diagnostic_i18n.hpp>
 #include <deimos/support/strings.hpp>
 
 namespace deimos
@@ -148,20 +149,17 @@ void reportInvalidHex(const std::string& value, const std::string& path, std::ve
 {
     if (value.empty())
     {
-        diagnostics.push_back(error("round.fake_payload.empty", "inline fake payload is empty", path));
+        diagnostics.push_back(errorAt("round.fake_payload.empty", path));
         return;
     }
     if (value.size() % 2 != 0)
     {
-        diagnostics.push_back(error("round.fake_payload.odd_hex",
-                                    "inline fake payload must contain an even number of hex digits",
-                                    path));
+        diagnostics.push_back(errorAt("round.fake_payload.odd_hex", path));
         return;
     }
     if (!strings::fromHex(value).has_value())
     {
-        diagnostics.push_back(
-            error("round.fake_payload.invalid_hex", "inline fake payload contains non-hex characters", path));
+        diagnostics.push_back(errorAt("round.fake_payload.invalid_hex", path));
     }
 }
 
@@ -175,10 +173,8 @@ void checkDuplicatePorts(const std::vector<std::uint16_t>& ports,
     {
         if (std::find(seen.begin(), seen.end(), port) != seen.end())
         {
-            diagnostics.push_back(warning("round.filter.duplicate_port",
-                                          std::string{"duplicate "} + std::string{field} + " port " +
-                                              std::to_string(port),
-                                          path));
+            diagnostics.push_back(
+                warningAt("round.filter.duplicate_port", path, {std::string{field}, std::to_string(port)}));
             continue;
         }
         seen.push_back(port);
@@ -320,16 +316,12 @@ std::vector<Diagnostic> validateRound(const DesyncRound& round, std::string_view
 
     if (round.filter.isEmpty())
     {
-        diagnostics.push_back(error("round.filter.empty",
-                                    "a desync round needs at least one TCP or UDP port",
-                                    base + ".filter"));
+        diagnostics.push_back(errorAt("round.filter.empty", base + ".filter"));
     }
 
     if (round.modes.empty())
     {
-        diagnostics.push_back(error("round.modes.empty",
-                                    "a desync round needs at least one desync mode",
-                                    base + ".modes"));
+        diagnostics.push_back(errorAt("round.modes.empty", base + ".modes"));
     }
 
     checkDuplicatePorts(round.filter.tcpPorts, "TCP", base + ".filter.tcp", diagnostics);
@@ -337,49 +329,39 @@ std::vector<Diagnostic> validateRound(const DesyncRound& round, std::string_view
 
     if (round.splitPos.has_value() && *round.splitPos < 0)
     {
-        diagnostics.push_back(error("round.split_pos.negative",
-                                    "split position cannot be negative",
-                                    base + ".splitPos"));
+        diagnostics.push_back(errorAt("round.split_pos.negative", base + ".splitPos"));
     }
 
     if (round.splitSeqOverlap.has_value() && *round.splitSeqOverlap < 0)
     {
-        diagnostics.push_back(error("round.split_seqovl.negative",
-                                    "sequence overlap cannot be negative",
-                                    base + ".splitSeqOverlap"));
+        diagnostics.push_back(errorAt("round.split_seqovl.negative", base + ".splitSeqOverlap"));
     }
 
     if (round.ttl.has_value() && (*round.ttl <= 0 || *round.ttl > 255))
     {
-        diagnostics.push_back(error("round.ttl.range", "TTL must be within 1..255", base + ".ttl"));
+        diagnostics.push_back(errorAt("round.ttl.range", base + ".ttl"));
     }
 
     if (round.autoTtl.has_value() && (*round.autoTtl <= 0 || *round.autoTtl > 32))
     {
-        diagnostics.push_back(error("round.autottl.range",
-                                    "automatic TTL correction must be within 1..32",
-                                    base + ".autoTtl"));
+        diagnostics.push_back(errorAt("round.autottl.range", base + ".autoTtl"));
     }
 
     if (round.repeats.has_value() && (*round.repeats <= 0 || *round.repeats > 32))
     {
-        diagnostics.push_back(error("round.repeats.range", "repeat count must be within 1..32", base + ".repeats"));
+        diagnostics.push_back(errorAt("round.repeats.range", base + ".repeats"));
     }
 
     if (round.windowSize.has_value() && *round.windowSize < 0)
     {
-        diagnostics.push_back(error("round.window_size.negative",
-                                    "window size cannot be negative",
-                                    base + ".windowSize"));
+        diagnostics.push_back(errorAt("round.window_size.negative", base + ".windowSize"));
     }
 
     if (round.fakePayload.has_value())
     {
         if (round.fakePayload->value.empty())
         {
-            diagnostics.push_back(error("round.fake_payload.empty",
-                                        "fake payload reference is empty",
-                                        base + ".fakePayload"));
+            diagnostics.push_back(errorAt("round.fake_payload.empty", base + ".fakePayload"));
         }
         else if (round.fakePayload->kind == FakePayloadKind::hex)
         {
@@ -388,24 +370,18 @@ std::vector<Diagnostic> validateRound(const DesyncRound& round, std::string_view
     }
     else if (round.usesFakePayload())
     {
-        diagnostics.push_back(info("round.fake_payload.default",
-                                   "no fake payload configured, zapret will use its built-in default",
-                                   base + ".fakePayload"));
+        diagnostics.push_back(infoAt("round.fake_payload.default", base + ".fakePayload"));
     }
 
     const bool hasSpoofingHint = !round.fooling.empty() || round.ttl.has_value() || round.autoTtl.has_value();
     if (std::any_of(round.modes.begin(), round.modes.end(), isDisorderMode) && !hasSpoofingHint)
     {
-        diagnostics.push_back(warning("round.disorder.no_spoofing",
-                                      "disorder desync normally needs fooling flags or a TTL to reach the server",
-                                      base + ".fooling"));
+        diagnostics.push_back(warningAt("round.disorder.no_spoofing", base + ".fooling"));
     }
 
     if (round.modes.size() > 2)
     {
-        diagnostics.push_back(warning("round.modes.too_many",
-                                      "more than two desync modes per round is rarely useful",
-                                      base + ".modes"));
+        diagnostics.push_back(warningAt("round.modes.too_many", base + ".modes"));
     }
 
     if (tool == ToolKind::tpws)
@@ -416,35 +392,19 @@ std::vector<Diagnostic> validateRound(const DesyncRound& round, std::string_view
                              containsMode(round.modes, DesyncMode::hostFakeSplit);
         if (hasFake)
         {
-            diagnostics.push_back(error("round.tpws.unsupported_mode",
-                                        "tpws cannot send fake packets; use split or disorder instead",
-                                        base + ".modes"));
+            diagnostics.push_back(errorAt("round.tpws.unsupported_mode", base + ".modes"));
         }
-        if (round.fooling.size() > 0 || round.ttl.has_value() || round.repeats.has_value())
+        if (!round.fooling.empty() || round.ttl.has_value() || round.repeats.has_value())
         {
-            diagnostics.push_back(warning("round.tpws.unsupported_options",
-                                          "tpws ignores fooling, TTL and repeats",
-                                          base + ".modes"));
+            diagnostics.push_back(warningAt("round.tpws.unsupported_options", base + ".modes"));
         }
         if (!round.filter.udpPorts.empty())
         {
-            diagnostics.push_back(error("round.tpws.udp_not_supported",
-                                        "tpws only handles TCP; remove UDP ports from this round",
-                                        base + ".filter.udp"));
+            diagnostics.push_back(errorAt("round.tpws.udp_not_supported", base + ".filter.udp"));
         }
         if (round.filter.tcpPorts.empty())
         {
-            diagnostics.push_back(error("round.tpws.tcp_required",
-                                        "tpws rounds need at least one TCP port",
-                                        base + ".filter.tcp"));
-        }
-    }
-
-    if (tool == ToolKind::winws || tool == ToolKind::nfqws)
-    {
-        if (round.filter.tcpPorts.empty() && round.filter.udpPorts.empty())
-        {
-            diagnostics.push_back(error("round.filter.empty", "no ports selected", base + ".filter"));
+            diagnostics.push_back(errorAt("round.tpws.tcp_required", base + ".filter.tcp"));
         }
     }
 

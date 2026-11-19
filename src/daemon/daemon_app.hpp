@@ -24,6 +24,7 @@ struct DaemonOptions
     std::string listenOverride;
     int portOverride = 0;
     std::string logLevelOverride;
+    std::string languageOverride;
 };
 
 /// Wires configuration, logging, zapret detection, the engine and the API together.

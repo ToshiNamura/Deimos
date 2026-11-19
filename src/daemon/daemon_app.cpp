@@ -3,6 +3,8 @@
 #include <thread>
 #include <utility>
 
+#include <deimos/support/i18n.hpp>
+#include <deimos/support/labels.hpp>
 #include <deimos/support/platform.hpp>
 #include <deimos/support/strings.hpp>
 #include <deimos/version.hpp>
@@ -22,6 +24,10 @@ DaemonApp::~DaemonApp()
 
 Status DaemonApp::initialize()
 {
+    // Diagnostics produced while loading already follow the environment or the OS
+    // language; the configuration can override it once it has been read.
+    i18n::setLanguage(i18n::Language::system);
+
     std::string configPath = options_.configPath;
     if (configPath.empty())
     {
@@ -35,7 +41,7 @@ Status DaemonApp::initialize()
     {
         for (const Diagnostic& diagnostic : diagnostics)
         {
-            log::error("config", std::string{toString(diagnostic.severity)} + ": " + diagnostic.message);
+            log::error("config", std::string{labels::severity(diagnostic.severity)} + ": " + diagnostic.message);
         }
         return status;
     }
@@ -50,15 +56,20 @@ Status DaemonApp::initialize()
         }
     }
 
+    i18n::setLanguageByCode(options_.languageOverride.empty() ? config.daemon.language : options_.languageOverride);
+
     configureLogging(config);
     refreshZapret(config);
 
     EngineContext context = buildContext(config);
     engine_ = std::make_unique<RuntimeEngine>(std::move(context));
 
-    log::info("daemon", std::string{"Deimos daemon "} + versionString() + " on " + std::string{platform::platformName()} +
-                            "/" + std::string{platform::architectureName()});
-    log::info("config", "configuration file: " + configPath);
+    log::info("daemon",
+              i18n::tr("log.daemon.started",
+                       {versionString(),
+                        std::string{platform::platformName()},
+                        std::string{platform::architectureName()}}));
+    log::info("config", i18n::tr("log.config.file", {configPath}));
     return Status::ok();
 }
 
@@ -120,7 +131,7 @@ Status DaemonApp::start()
 {
     if (!store_ || !engine_)
     {
-        return Status::failure(ErrorCode::conflict, "call initialize() before start()");
+        return Status::failure(ErrorCode::conflict, i18n::tr("err.daemon.notInitialized"));
     }
 
     const DeimosConfig config = store_->config();
@@ -154,17 +165,18 @@ Status DaemonApp::start()
 
     if (const Status status = api_->start(address, port); !status.isOk())
     {
-        log::error("api", "cannot start the API server: " + status.error().describe());
+        log::error("api", i18n::tr("log.api.startFailed", {status.error().describe()}));
         return status;
     }
     apiStarted_ = true;
 
+    const std::string listenUrl = "http://" + address + ":" + std::to_string(api_->boundPort());
     log::info("api",
-              "listening on http://" + address + ":" + std::to_string(api_->boundPort()) +
-                  (config.daemon.requireAuthentication ? " (bearer token required)" : " (authentication disabled)"));
+              i18n::tr(config.daemon.requireAuthentication ? "log.api.listeningToken" : "log.api.listeningOpen",
+                       {listenUrl}));
     if (config.daemon.requireAuthentication)
     {
-        log::info("api", "token file: " + store_->tokenFile());
+        log::info("api", i18n::tr("log.api.tokenFile", {store_->tokenFile()}));
     }
 
     if (config.daemon.autoStartEngine && !config.daemon.activeProfileId.empty())
@@ -175,14 +187,14 @@ Status DaemonApp::start()
             if (!result)
             {
                 log::error("engine",
-                           "autostart of profile '" + config.daemon.activeProfileId +
-                               "' failed: " + result.error().describe());
+                           i18n::tr("log.engine.autostartFailed",
+                                    {config.daemon.activeProfileId, result.error().describe()}));
             }
         }
         else
         {
             log::warning("engine",
-                         "autostart skipped: profile '" + config.daemon.activeProfileId + "' does not exist");
+                         i18n::tr("log.engine.autostartSkipped", {config.daemon.activeProfileId}));
         }
     }
 
@@ -219,12 +231,13 @@ void DaemonApp::shutdown()
     {
         api_->stop();
         apiStarted_ = false;
-        log::info("api", "API server stopped");
+        log::info("api", i18n::tr("log.api.stopped"));
     }
 }
 
 Status DaemonApp::applyConfig(const DeimosConfig& config)
 {
+    i18n::setLanguageByCode(config.daemon.language);
     configureLogging(config);
     refreshZapret(config);
 
@@ -254,12 +267,13 @@ Status DaemonApp::applyConfig(const DeimosConfig& config)
             const auto result = engine_->start(*profile);
             if (!result)
             {
-                log::error("engine", "restart after configuration change failed: " + result.error().describe());
+                log::error("engine",
+                           i18n::tr("log.engine.restartAfterConfigFailed", {result.error().describe()}));
             }
         }
     }
 
-    log::info("config", "configuration applied");
+    log::info("config", i18n::tr("log.config.applied"));
     return Status::ok();
 }
 

@@ -1,5 +1,7 @@
 #include <deimos/model/profile.hpp>
 
+#include <deimos/model/diagnostic_i18n.hpp>
+
 #include <algorithm>
 
 #include <deimos/support/strings.hpp>
@@ -17,7 +19,7 @@ DesyncRound parseRound(const detail::Json& node, std::string_view path, std::vec
     DesyncRound round;
     if (!node.is_object())
     {
-        diagnostics.push_back(error("profile.round.invalid", "round must be an object", std::string{path}));
+        diagnostics.push_back(errorAt("profile.round.invalid", std::string{path}));
         return round;
     }
 
@@ -48,9 +50,8 @@ DesyncRound parseRound(const detail::Json& node, std::string_view path, std::vec
         const std::string kindText = payload->value("kind", std::string{"file"});
         if (!parseFakePayloadKind(kindText, parsed.kind))
         {
-            diagnostics.push_back(error("profile.fake_payload.invalid_kind",
-                                        "fake payload kind must be 'file' or 'hex'",
-                                        std::string{path} + ".fakePayload.kind"));
+            diagnostics.push_back(
+                errorAt("profile.fake_payload.invalid_kind", std::string{path} + ".fakePayload.kind"));
         }
         parsed.value = payload->value("value", std::string{});
         round.fakePayload = std::move(parsed);
@@ -154,7 +155,7 @@ std::vector<Diagnostic> validateProfile(const Profile& profile, std::size_t inde
 
     if (profile.id.empty())
     {
-        diagnostics.push_back(error("profile.id.empty", "profile id must not be empty", base + ".id"));
+        diagnostics.push_back(errorAt("profile.id.empty", base + ".id"));
     }
     else
     {
@@ -163,27 +164,23 @@ std::vector<Diagnostic> validateProfile(const Profile& profile, std::size_t inde
             profile.id.front() != '.';
         if (!validCharacters)
         {
-            diagnostics.push_back(error("profile.id.invalid",
-                                        "profile id may only contain a-z, 0-9, '-', '_' and '.'",
-                                        base + ".id"));
+            diagnostics.push_back(errorAt("profile.id.invalid", base + ".id"));
         }
     }
 
     if (profile.name.empty())
     {
-        diagnostics.push_back(warning("profile.name.empty", "profile has no display name", base + ".name"));
+        diagnostics.push_back(warningAt("profile.name.empty", base + ".name"));
     }
 
     if (profile.rounds.empty())
     {
-        diagnostics.push_back(error("profile.rounds.empty",
-                                    "a profile needs at least one desync round",
-                                    base + ".rounds"));
+        diagnostics.push_back(errorAt("profile.rounds.empty", base + ".rounds"));
     }
 
     if (profile.nfqueue == 0)
     {
-        diagnostics.push_back(error("profile.nfqueue.invalid", "nfqueue number must be greater than 0", base + ".nfqueue"));
+        diagnostics.push_back(errorAt("profile.nfqueue.invalid", base + ".nfqueue"));
     }
 
     for (std::size_t roundIndex = 0; roundIndex < profile.rounds.size(); ++roundIndex)
@@ -195,9 +192,7 @@ std::vector<Diagnostic> validateProfile(const Profile& profile, std::size_t inde
         if (profile.tool != ToolKind::tpws && profile.rounds[roundIndex].filter.l7.size() > 0 &&
             profile.rounds[roundIndex].filter.isEmpty())
         {
-            diagnostics.push_back(warning("profile.round.l7_without_ports",
-                                          "--filter-l7 only applies together with TCP or UDP ports",
-                                          roundPath + ".filter.l7"));
+            diagnostics.push_back(warningAt("profile.round.l7_without_ports", roundPath + ".filter.l7"));
         }
     }
 
@@ -205,9 +200,7 @@ std::vector<Diagnostic> validateProfile(const Profile& profile, std::size_t inde
     {
         if (argument == "--new")
         {
-            diagnostics.push_back(error("profile.extra_arguments.reserved",
-                                        "'--new' is generated from rounds and must not be listed explicitly",
-                                        base + ".extraArguments"));
+            diagnostics.push_back(errorAt("profile.extra_arguments.reserved", base + ".extraArguments"));
         }
     }
 
@@ -229,14 +222,14 @@ Status parseProfile(std::string_view text, Profile& out, std::vector<Diagnostic>
     }
     catch (const std::exception& exception)
     {
-        diagnostics.push_back(error("profile.invalid_json", exception.what()));
-        return Status::failure(ErrorCode::invalidArgument, "profile is not valid JSON", exception.what());
+        diagnostics.push_back(errorAt("profile.invalid_json", "", {exception.what()}));
+        return Status::failure(ErrorCode::invalidArgument, i18n::tr("err.profile.invalid_json"), exception.what());
     }
 
     if (!root.is_object())
     {
-        diagnostics.push_back(error("profile.invalid_json", "profile must be a JSON object"));
-        return Status::failure(ErrorCode::invalidArgument, "profile must be a JSON object");
+        diagnostics.push_back(errorAt("profile.invalid_json.object", ""));
+        return Status::failure(ErrorCode::invalidArgument, i18n::tr("err.profile.not_an_object"));
     }
 
     Profile parsed;
@@ -246,8 +239,8 @@ Status parseProfile(std::string_view text, Profile& out, std::vector<Diagnostic>
     }
     catch (const std::exception& exception)
     {
-        diagnostics.push_back(error("profile.invalid_type", exception.what()));
-        return Status::failure(ErrorCode::invalidArgument, "profile has a field of the wrong type", exception.what());
+        diagnostics.push_back(errorAt("profile.invalid_type", "", {exception.what()}));
+        return Status::failure(ErrorCode::invalidArgument, i18n::tr("err.profile.wrong_type"), exception.what());
     }
 
     const auto profileDiagnostics = validateProfile(parsed, 0);
@@ -256,7 +249,7 @@ Status parseProfile(std::string_view text, Profile& out, std::vector<Diagnostic>
     out = std::move(parsed);
     if (hasErrors(diagnostics))
     {
-        return Status::failure(ErrorCode::invalidArgument, "profile failed validation");
+        return Status::failure(ErrorCode::invalidArgument, i18n::tr("err.profile.invalid"));
     }
     return Status::ok();
 }
@@ -313,9 +306,7 @@ Profile parseProfileJson(const Json& node, std::string_view path, std::vector<Di
     const std::string toolText = node.value("tool", std::string{"auto"});
     if (!parseToolKind(toolText, profile.tool))
     {
-        diagnostics.push_back(error("profile.tool.unknown",
-                                    "unknown tool '" + toolText + "'",
-                                    jsonPath(base, "tool")));
+        diagnostics.push_back(errorAt("profile.tool.unknown", jsonPath(base, "tool"), {toolText}));
     }
 
     const int nfqueue = node.value("nfqueue", 200);
@@ -325,9 +316,7 @@ Profile parseProfileJson(const Json& node, std::string_view path, std::vector<Di
     }
     else
     {
-        diagnostics.push_back(error("profile.nfqueue.range",
-                                    "nfqueue number must be within 1..65535",
-                                    jsonPath(base, "nfqueue")));
+        diagnostics.push_back(errorAt("profile.nfqueue.range", jsonPath(base, "nfqueue")));
     }
 
     profile.winDivertTcpPorts = readPorts(node, "winDivertTcpPorts", base, diagnostics);

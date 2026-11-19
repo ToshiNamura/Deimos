@@ -32,6 +32,10 @@ Authorization: Bearer <token>
 Profile writes that fail validation answer 400 with the usual error object plus a
 `diagnostics` array, so a client can show exactly which field is wrong.
 
+`message`, `detail` and the diagnostic messages follow the daemon's language
+(`daemon.language`, `--lang`); `code` and the diagnostic `code` fields never change.
+See [Localisation](localization.md).
+
 ## Health
 
 `GET /api/v1/health` (also `GET /health`), no token required.
