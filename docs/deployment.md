@@ -55,6 +55,23 @@ it with defaults when the path is missing. Read-only commands never create or mo
 `--validate-config` validates the file (or the in-memory defaults when the path does not
 exist) and leaves nothing behind. `--generate-token` writes only the token file.
 
+The daemon speaks English and Russian. It picks the system UI language by default; pin it
+with `daemon.language` in the configuration or `--lang auto|en|ru` on the command line:
+
+```bash
+deimosd --config /etc/deimos/deimos.json --lang ru --validate-config
+```
+
+The same switch exists on the client and only affects that run:
+
+```bash
+deimos status --lang ru
+deimos --gui --lang ru
+```
+
+See [Localisation](localization.md) for the detection order and the list of translated
+surfaces.
+
 ## Windows service
 
 Run an elevated prompt:

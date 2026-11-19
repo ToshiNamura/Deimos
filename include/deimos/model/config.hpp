@@ -19,6 +19,9 @@ struct DaemonSettings
     std::string listenAddress = "127.0.0.1";
     std::uint16_t port = 8787;
 
+    /// Language of diagnostics and API messages: "auto", "en" or "ru".
+    std::string language{"auto"};
+
     /// Required when the daemon listens on a non-loopback address.
     bool allowRemoteClients = false;
 

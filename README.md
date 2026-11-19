@@ -4,6 +4,8 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](CMakeLists.txt)
 
+![Deimos](assets/background.png)
+
 Deimos is a cross-platform control plane for DPI bypass on top of
 [zapret](https://github.com/bol-van/zapret) and [zapret2](https://github.com/bol-van/zapret2).
 
@@ -33,6 +35,9 @@ CLI manage a daemon on `127.0.0.1` and a daemon on a remote server.
   the launchd plist.
 - **Headless footprint.** The `daemon-only` preset builds a single statically linked
   `deimosd` for servers, routers and containers.
+- **English and Russian out of the box.** The interface, the CLI, the help, the daemon logs
+  and every validation diagnostic are translated, and the interface switches language
+  without a restart. See [Localisation](docs/localization.md).
 
 ## Status
 
@@ -63,6 +68,7 @@ so opening a feature request is the way to influence the order.
 - [Strategies](docs/strategies.md) - how profiles map onto zapret arguments
 - [Building](docs/building.md) - toolchains, presets, packaging
 - [Deployment](docs/deployment.md) - services on Windows, Linux and macOS
+- [Localisation](docs/localization.md) - languages, the message catalog, adding strings
 
 ## Quick start
 
@@ -149,6 +155,13 @@ build, test and style requirements; [CHANGELOG.md](CHANGELOG.md) records what ch
 
 Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md), never in a
 public issue.
+
+## Brand assets
+
+The logo, the icon and the banner live in [assets/](assets): `logo.png` and `icon.png` are
+283x300, `background.png` is the 1200x300 banner used at the top of this page.
+`assets/generate-assets.ps1` redraws all three with GDI+ on Windows, so the artwork stays
+reproducible from source instead of being an opaque binary blob.
 
 ## License
 

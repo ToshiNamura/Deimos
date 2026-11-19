@@ -9,6 +9,7 @@
 #include <nlohmann/json.hpp>
 
 #include <deimos/model/diagnostic.hpp>
+#include <deimos/model/diagnostic_i18n.hpp>
 
 namespace deimos::detail
 {
@@ -68,9 +69,8 @@ std::vector<Enum> readEnumArray(const Json& object,
     {
         if (!item.is_string())
         {
-            diagnostics.push_back(error("config.invalid_value",
-                                        std::string{"value of '"} + key + "' must be a string",
-                                        jsonPath(basePath, key)));
+            diagnostics.push_back(
+                errorAt("config.value.not_string", jsonPath(basePath, key), {std::string{key}}));
             continue;
         }
         const std::string text = item.get<std::string>();
@@ -81,9 +81,8 @@ std::vector<Enum> readEnumArray(const Json& object,
         }
         else
         {
-            diagnostics.push_back(error("config.unknown_value",
-                                        std::string{"unknown value '"} + text + "' for '" + key + "'",
-                                        jsonPath(basePath, key)));
+            diagnostics.push_back(
+                errorAt("config.value.unknown", jsonPath(basePath, key), {text, std::string{key}}));
         }
     }
     return result;
@@ -116,17 +115,16 @@ inline std::vector<std::uint16_t> readPorts(const Json& object,
     {
         if (!item.is_number_integer())
         {
-            diagnostics.push_back(error("config.invalid_port",
-                                        std::string{"port in '"} + key + "' must be an integer",
-                                        jsonPath(basePath, key)));
+            diagnostics.push_back(
+                errorAt("config.port.not_integer", jsonPath(basePath, key), {std::string{key}}));
             continue;
         }
         const std::int64_t value = item.get<std::int64_t>();
         if (value <= 0 || value > 65535)
         {
-            diagnostics.push_back(error("config.invalid_port",
-                                        "port " + std::to_string(value) + " is outside 1..65535",
-                                        jsonPath(basePath, key)));
+            diagnostics.push_back(errorAt("config.port.out_of_range",
+                                          jsonPath(basePath, key),
+                                          {std::to_string(value)}));
             continue;
         }
         ports.push_back(static_cast<std::uint16_t>(value));

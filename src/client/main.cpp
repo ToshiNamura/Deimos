@@ -2,6 +2,8 @@
 #include <cstring>
 #include <iostream>
 
+#include <deimos/support/i18n.hpp>
+
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -11,7 +13,7 @@
 #if defined(DEIMOS_HAS_UI)
 namespace deimos::ui
 {
-int runWindow();
+int runWindow(const std::string& languageOverride);
 }
 #endif
 
@@ -90,11 +92,23 @@ int main(int argc, char** argv)
 {
     const bool fromTerminal = launchedFromTerminal();
 
+    // Language must be set before the window opens; the CLI does the same inside runCli().
+    std::string languageOverride;
+    for (int index = 1; index + 1 < argc; ++index)
+    {
+        if (std::strcmp(argv[index], "--lang") == 0)
+        {
+            languageOverride = argv[index + 1];
+            deimos::i18n::setLanguageByCode(languageOverride);
+            break;
+        }
+    }
+
     if (wantsWindow(argc, argv, fromTerminal))
     {
         detachConsoleForWindow();
 #if defined(DEIMOS_HAS_UI)
-        return deimos::ui::runWindow();
+        return deimos::ui::runWindow(languageOverride);
 #else
         std::fprintf(stderr, "deimos: this build does not include the graphical interface\n");
         return EXIT_USAGE;

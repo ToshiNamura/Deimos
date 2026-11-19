@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <string>
 
+#include <deimos/support/i18n.hpp>
+#include <deimos/support/labels.hpp>
 #include <deimos/support/strings.hpp>
 
 #include "theme.hpp"
@@ -10,6 +12,8 @@
 
 namespace deimos::ui
 {
+using i18n::tr;
+
 namespace
 {
 
@@ -122,7 +126,7 @@ std::vector<const char*> displayNames(const std::vector<DesyncMode>& values)
     std::vector<const char*> names;
     for (const DesyncMode value : values)
     {
-        names.push_back(toDisplayName(value).data());
+        names.push_back(labels::desyncMode(value).data());
     }
     return names;
 }
@@ -132,7 +136,7 @@ std::vector<const char*> displayNames(const std::vector<Fooling>& values)
     std::vector<const char*> names;
     for (const Fooling value : values)
     {
-        names.push_back(toDisplayName(value).data());
+        names.push_back(labels::fooling(value).data());
     }
     return names;
 }
@@ -142,7 +146,7 @@ std::vector<const char*> displayNames(const std::vector<L7Protocol>& values)
     std::vector<const char*> names;
     for (const L7Protocol value : values)
     {
-        names.push_back(toDisplayName(value).data());
+        names.push_back(labels::l7(value).data());
     }
     return names;
 }
@@ -172,7 +176,7 @@ void App::renderProfiles()
     ImGui::SetCursorScreenPos(origin);
     cardBegin("##profile-list", ImVec2(listWidth, cardHeight));
 
-    if (primaryButton("New profile", ImVec2(listWidth - 40.0f, 0.0f)))
+    if (primaryButton(tr("ui.profiles.new").c_str(), ImVec2(listWidth - 40.0f, 0.0f)))
     {
         beginNewProfile();
         editor = ProfileEditor{};
@@ -186,7 +190,7 @@ void App::renderProfiles()
     ImGui::BeginChild("##profile-items", ImVec2(0.0f, 0.0f));
     if (current.profiles.empty())
     {
-        mutedText("No profiles on this daemon yet.");
+        mutedText(tr("ui.profiles.empty").c_str());
     }
     for (const ProfileSummary& summary : current.profiles)
     {
@@ -241,9 +245,9 @@ void App::renderProfiles()
 
     if (!editor.loaded)
     {
-        heading("Select a profile");
+        heading(tr("ui.profiles.selectTitle").c_str());
         spacer(6.0f);
-        mutedText("Pick a profile on the left, or create a new one.");
+        mutedText(tr("ui.profiles.selectHint").c_str());
         cardEnd();
         {
             std::lock_guard<std::mutex> lock(mutex_);
@@ -255,28 +259,31 @@ void App::renderProfiles()
     ImGui::BeginChild("##editor-scroll", ImVec2(0.0f, cardHeight - 90.0f));
     ImGui::PushItemWidth(320.0f);
 
-    sectionTitle("IDENTITY");
-    mutedText("ID");
+    sectionTitle(tr("ui.profiles.identity").c_str());
+    mutedText(tr("ui.field.id").c_str());
     ImGui::BeginDisabled(!editor.isNew);
     inputString("##profile-id", editor.profile.id);
     ImGui::EndDisabled();
-    mutedText("Name");
+    mutedText(tr("ui.field.name").c_str());
     inputString("##profile-name", editor.profile.name);
-    mutedText("Description");
+    mutedText(tr("ui.field.description").c_str());
     ImGui::SetNextItemWidth(520.0f);
     inputString("##profile-description", editor.profile.description);
 
     spacer(6.0f);
-    mutedText("Tool");
+    mutedText(tr("ui.field.tool").c_str());
     ImGui::PushItemWidth(220.0f);
     int toolIndex = static_cast<int>(editor.profile.tool);
-    const char* toolLabels[] = {"automatic", "winws (Windows)", "nfqws (Linux)", "tpws (Linux proxy)"};
+    const char* toolLabels[] = {tr("ui.tool.auto").c_str(),
+                                tr("ui.tool.winws").c_str(),
+                                tr("ui.tool.nfqws").c_str(),
+                                tr("ui.tool.tpws").c_str()};
     if (ImGui::Combo("##profile-tool", &toolIndex, toolLabels, IM_ARRAYSIZE(toolLabels)))
     {
         editor.profile.tool = static_cast<ToolKind>(toolIndex);
     }
     ImGui::PopItemWidth();
-    mutedText("NFQUEUE number");
+    mutedText(tr("ui.field.nfqueue").c_str());
     ImGui::PushItemWidth(120.0f);
     int nfqueue = static_cast<int>(editor.profile.nfqueue);
     if (ImGui::InputInt("##profile-nfqueue", &nfqueue, 0, 0))
@@ -288,10 +295,10 @@ void App::renderProfiles()
     }
     ImGui::PopItemWidth();
     ImGui::PopItemWidth();
-    toggleSwitch("Enabled", editor.profile.enabled);
+    toggleSwitch(tr("ui.field.enabled").c_str(), editor.profile.enabled);
 
     spacer(8.0f);
-    sectionTitle("ROUNDS");
+    sectionTitle(tr("ui.profiles.rounds").c_str());
     for (std::size_t index = 0; index < editor.profile.rounds.size(); ++index)
     {
         DesyncRound& round = editor.profile.rounds[index];
@@ -307,7 +314,7 @@ void App::renderProfiles()
         if (editor.profile.rounds.size() > 1)
         {
             ImGui::SameLine(ImGui::GetContentRegionAvail().x - 20.0f);
-            if (iconButton("##remove-round", Icon::trash, "Remove this round"))
+            if (iconButton("##remove-round", Icon::trash, tr("ui.profiles.removeRound").c_str()))
             {
                 editor.profile.rounds.erase(editor.profile.rounds.begin() + static_cast<std::ptrdiff_t>(index));
                 editor.rounds.erase(editor.rounds.begin() + static_cast<std::ptrdiff_t>(index));
@@ -317,15 +324,15 @@ void App::renderProfiles()
         }
         if (open)
         {
-            mutedText("TCP ports");
+            mutedText(tr("ui.field.tcpPorts").c_str());
             ImGui::PushItemWidth(220.0f);
             inputString("##tcp-ports", roundEditor.tcpText);
             ImGui::PopItemWidth();
-            mutedText("UDP ports");
+            mutedText(tr("ui.field.udpPorts").c_str());
             ImGui::PushItemWidth(220.0f);
             inputString("##udp-ports", roundEditor.udpText);
             ImGui::PopItemWidth();
-            mutedText("Comma separated, for example 80,443");
+            mutedText(tr("ui.profiles.portsHint").c_str());
 
             auto l7Indices = selectedIndices(round.filter.l7, allL7Protocols());
             checkboxTable("##l7", displayNames(allL7Protocols()), l7Indices);
@@ -340,13 +347,13 @@ void App::renderProfiles()
             round.fooling = valuesFromIndices(foolingIndices, allFoolingFlags());
 
             spacer(4.0f);
-            optionalIntField("Split position", round.splitPos, 1);
-            optionalIntField("Automatic TTL", round.autoTtl, 2);
-            optionalIntField("TTL", round.ttl, 5);
-            optionalIntField("Repeats", round.repeats, 6);
+            optionalIntField(tr("ui.field.splitPos").c_str(), round.splitPos, 1);
+            optionalIntField(tr("ui.field.autoTtl").c_str(), round.autoTtl, 2);
+            optionalIntField(tr("ui.field.ttl").c_str(), round.ttl, 5);
+            optionalIntField(tr("ui.field.repeats").c_str(), round.repeats, 6);
 
             bool hasPayload = round.fakePayload.has_value();
-            if (toggleSwitch("Fake payload", hasPayload))
+            if (toggleSwitch(tr("ui.field.fakePayload").c_str(), hasPayload))
             {
                 if (hasPayload)
                 {
@@ -361,7 +368,7 @@ void App::renderProfiles()
             {
                 ImGui::PushItemWidth(140.0f);
                 int kindIndex = round.fakePayload->kind == FakePayloadKind::hex ? 1 : 0;
-                const char* kindLabels[] = {"file", "inline hex"};
+                const char* kindLabels[] = {tr("ui.payload.file").c_str(), tr("ui.payload.hex").c_str()};
                 if (ImGui::Combo("##payload-kind", &kindIndex, kindLabels, IM_ARRAYSIZE(kindLabels)))
                 {
                     round.fakePayload->kind = kindIndex == 1 ? FakePayloadKind::hex : FakePayloadKind::file;
@@ -375,28 +382,28 @@ void App::renderProfiles()
 
             spacer(6.0f);
             ImGui::PushItemWidth(420.0f);
-            ImGui::TextUnformatted("Hostlists");
+            ImGui::TextUnformatted(tr("ui.field.hostlists").c_str());
             multiLineString("##hostlists-round", roundEditor.hostlists, ImVec2(420.0f, 46.0f));
             ImGui::PopItemWidth();
         }
         ImGui::PopID();
     }
     ImGui::Spacing();
-    if (secondaryButton("Add round"))
+    if (secondaryButton(tr("ui.action.addRound").c_str()))
     {
         editor.profile.rounds.push_back(DesyncRound{});
         editor.rounds.push_back(RoundEditor{});
     }
 
     spacer(10.0f);
-    sectionTitle("SHARED LISTS");
-    ImGui::TextUnformatted("Hostlists");
+    sectionTitle(tr("ui.profiles.sharedLists").c_str());
+    ImGui::TextUnformatted(tr("ui.field.hostlists").c_str());
     multiLineString("##hostlists", editor.hostlists, ImVec2(420.0f, 56.0f));
-    ImGui::TextUnformatted("Excluded hostlists");
+    ImGui::TextUnformatted(tr("ui.field.hostlistExcludes").c_str());
     multiLineString("##hostlist-excludes", editor.hostlistExcludes, ImVec2(420.0f, 46.0f));
-    ImGui::TextUnformatted("IP sets");
+    ImGui::TextUnformatted(tr("ui.field.ipsets").c_str());
     multiLineString("##ipsets", editor.ipsets, ImVec2(420.0f, 46.0f));
-    ImGui::TextUnformatted("Extra zapret arguments");
+    ImGui::TextUnformatted(tr("ui.field.extraArguments").c_str());
     multiLineString("##extra-args", editor.extraArguments, ImVec2(420.0f, 56.0f));
 
     if (!editor.error.empty())
@@ -410,7 +417,7 @@ void App::renderProfiles()
     ImGui::EndChild();
 
     spacer(6.0f);
-    if (primaryButton("Save"))
+    if (primaryButton(tr("ui.action.save").c_str()))
     {
         {
             std::lock_guard<std::mutex> lock(mutex_);
@@ -419,11 +426,11 @@ void App::renderProfiles()
         saveEditorProfile();
     }
     ImGui::SameLine();
-    if (secondaryButton("Preview command"))
+    if (secondaryButton(tr("ui.action.preview").c_str()))
     {
         if (editor.isNew)
         {
-            toast("save the profile before previewing the command line", true);
+            toast(tr("ui.toast.previewFirst"), true);
         }
         else
         {
@@ -435,7 +442,7 @@ void App::renderProfiles()
         }
     }
     ImGui::SameLine();
-    if (!editor.isNew && dangerButton("Delete"))
+    if (!editor.isNew && dangerButton(tr("ui.action.delete").c_str()))
     {
         deleteProfile(editor.originalId);
     }
@@ -472,11 +479,11 @@ void App::renderProfiles()
     }
     if (showPreview)
     {
-        ImGui::OpenPopup("Command preview");
+        ImGui::OpenPopup(tr("ui.profiles.previewTitle").c_str());
         ImGui::SetNextWindowSize(ImVec2(760.0f, 0.0f));
-        if (ImGui::BeginPopupModal("Command preview", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+        if (ImGui::BeginPopupModal(tr("ui.profiles.previewTitle").c_str(), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
         {
-            mutedText("Deimos runs these commands on the daemon host:");
+            mutedText(tr("ui.profiles.previewHint").c_str());
             spacer(6.0f);
             for (const std::string& command : commands)
             {
@@ -487,7 +494,7 @@ void App::renderProfiles()
             }
             if (commands.empty())
             {
-                mutedText("No commands were produced.");
+                mutedText(tr("ui.profiles.previewEmpty").c_str());
             }
             if (!diagnostics.empty())
             {
@@ -497,7 +504,7 @@ void App::renderProfiles()
                 ImGui::PopStyleColor();
             }
             spacer(8.0f);
-            if (primaryButton("Close"))
+            if (primaryButton(tr("ui.action.close").c_str()))
             {
                 {
                     std::lock_guard<std::mutex> lock(mutex_);

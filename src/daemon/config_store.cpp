@@ -4,6 +4,7 @@
 #include <random>
 #include <utility>
 
+#include <deimos/support/i18n.hpp>
 #include <deimos/support/log.hpp>
 #include <deimos/support/platform.hpp>
 #include <deimos/support/strings.hpp>
@@ -49,7 +50,7 @@ Status ConfigStore::load(std::vector<Diagnostic>* diagnostics)
     {
         config_ = defaultConfig();
         loaded_ = true;
-        log::warning("config", "no configuration at " + path_ + ", using defaults in memory");
+        log::warning("config", i18n::tr("log.config.defaultsInMemory", {path_}));
         return Status::ok();
     }
 
@@ -67,7 +68,7 @@ Status ConfigStore::load(std::vector<Diagnostic>* diagnostics)
 
     config_ = std::move(config);
     loaded_ = true;
-    log::info("config", "loaded configuration from " + path_);
+    log::info("config", i18n::tr("log.config.loaded", {path_}));
     return Status::ok();
 }
 
@@ -102,7 +103,7 @@ Status ConfigStore::saveLocked(std::vector<Diagnostic>* diagnostics)
     std::string errorMessage;
     if (!platform::writeFileAtomically(filePath, serializeConfig(config_, true) + "\n", errorMessage))
     {
-        return Status::failure(ErrorCode::io, "cannot write configuration", errorMessage);
+        return Status::failure(ErrorCode::io, i18n::tr("err.config.write"), errorMessage);
     }
     return Status::ok();
 }
@@ -181,7 +182,7 @@ Result<std::string> ConfigStore::rotateToken()
     if (!platform::writeFileAtomically(filePath, token + "\n", errorMessage))
     {
         return Result<std::string>{
-            Error{ErrorCode::io, "cannot write the access token", errorMessage}};
+            Error{ErrorCode::io, i18n::tr("err.config.writeToken"), errorMessage}};
     }
     platform::restrictFilePermissions(filePath);
 
@@ -189,7 +190,7 @@ Result<std::string> ConfigStore::rotateToken()
         std::lock_guard<std::mutex> lock(mutex_);
         token_ = token;
     }
-    log::info("config", "access token written to " + tokenPath);
+    log::info("config", i18n::tr("log.config.tokenWritten", {tokenPath}));
     return Result<std::string>{token};
 }
 

@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <string>
 
+#include <deimos/support/i18n.hpp>
+#include <deimos/support/labels.hpp>
 #include <deimos/support/strings.hpp>
 
 #include "theme.hpp"
@@ -10,6 +12,8 @@
 
 namespace deimos::ui
 {
+using i18n::tr;
+
 namespace
 {
 
@@ -49,25 +53,7 @@ ImU32 levelColor(LogLevel level)
 
 std::string durationText(std::int64_t seconds)
 {
-    if (seconds <= 0)
-    {
-        return "0s";
-    }
-    const std::int64_t hours = seconds / 3600;
-    const std::int64_t minutes = (seconds % 3600) / 60;
-    const std::int64_t remainder = seconds % 60;
-
-    std::string text;
-    if (hours > 0)
-    {
-        text += std::to_string(hours) + "h ";
-    }
-    if (hours > 0 || minutes > 0)
-    {
-        text += std::to_string(minutes) + "m ";
-    }
-    text += std::to_string(remainder) + "s";
-    return text;
+    return labels::duration(seconds);
 }
 
 } // namespace
@@ -87,14 +73,13 @@ void App::renderDashboard()
     {
         ImGui::SetCursorScreenPos(origin);
         cardBegin("##unreachable", ImVec2(width, 170.0f));
-        heading("Daemon unreachable");
+        heading(tr("ui.dash.unreachableTitle").c_str());
         spacer(4.0f);
-        mutedText(current.error.empty() ? "The daemon did not answer the status request."
-                                        : current.error.c_str());
+        mutedText(current.error.empty() ? tr("ui.dash.unreachableReason").c_str() : current.error.c_str());
         spacer(10.0f);
-        mutedText("Start it with: deimosd --foreground, or add a remote daemon on the Daemons page.");
+        mutedText(tr("ui.dash.unreachableHint").c_str());
         spacer(10.0f);
-        if (secondaryButton("Retry now"))
+        if (secondaryButton(tr("ui.action.retry").c_str()))
         {
             refreshNow();
         }
@@ -108,13 +93,13 @@ void App::renderDashboard()
     // --- engine card
     ImGui::SetCursorScreenPos(origin);
     cardBegin("##engine", ImVec2(leftWidth, CARD_HEIGHT));
-    sectionTitle("MODIFICATION ENGINE");
+    sectionTitle(tr("ui.dash.engine").c_str());
     {
         pushFont(fontHeading());
-        ImGui::TextUnformatted(isRunning ? "Running" : "Stopped");
+        ImGui::TextUnformatted(tr(isRunning ? "state.running" : "state.stopped").c_str());
         popFont();
         ImGui::SameLine();
-        pill(std::string{toString(engine.state)}.c_str(), stateColor(engine.state));
+        pill(std::string{labels::engineState(engine.state)}.c_str(), stateColor(engine.state));
         if (!engine.activeProfileId.empty())
         {
             ImGui::SameLine();
@@ -122,9 +107,9 @@ void App::renderDashboard()
         }
     }
     spacer(6.0f);
-    keyValue("Uptime", durationText(engine.uptimeSeconds));
-    keyValue("Restarts", std::to_string(engine.restartCount));
-    keyValue("Processes", std::to_string(engine.launches.size()));
+    keyValue(tr("ui.field.uptime").c_str(), durationText(engine.uptimeSeconds));
+    keyValue(tr("ui.field.restarts").c_str(), std::to_string(engine.restartCount));
+    keyValue(tr("ui.field.processes").c_str(), std::to_string(engine.launches.size()));
     if (!engine.lastError.empty())
     {
         ImGui::PushStyleColor(ImGuiCol_Text, colorVec4(colors.danger));
@@ -135,24 +120,24 @@ void App::renderDashboard()
 
     if (isRunning)
     {
-        if (secondaryButton("Stop")) 
+        if (secondaryButton(tr("ui.action.stop").c_str())) 
         {
             stopEngine();
         }
         ImGui::SameLine();
-        if (secondaryButton("Restart"))
+        if (secondaryButton(tr("ui.action.restart").c_str()))
         {
             restartEngine();
         }
     }
     else
     {
-        if (primaryButton("Start"))
+        if (primaryButton(tr("ui.action.start").c_str()))
         {
             startEngine(engine.activeProfileId);
         }
         ImGui::SameLine();
-        if (secondaryButton("Restart"))
+        if (secondaryButton(tr("ui.action.restart").c_str()))
         {
             restartEngine();
         }
@@ -162,31 +147,32 @@ void App::renderDashboard()
     // --- daemon card
     ImGui::SetCursorScreenPos(ImVec2(origin.x + leftWidth + 16.0f, origin.y));
     cardBegin("##daemon", ImVec2(rightWidth, CARD_HEIGHT));
-    sectionTitle("DAEMON");
-    keyValue("Version", current.info.version);
-    keyValue("Platform", current.info.platform + "/" + current.info.architecture);
-    keyValue("Host", current.info.hostname);
-    keyValue("Uptime", durationText(current.info.uptimeSeconds));
-    keyValue("Auth", current.info.authenticationRequired ? "bearer token" : "disabled");
+    sectionTitle(tr("ui.dash.daemon").c_str());
+    keyValue(tr("ui.field.version").c_str(), current.info.version);
+    keyValue(tr("ui.field.platform").c_str(), current.info.platform + "/" + current.info.architecture);
+    keyValue(tr("ui.field.host").c_str(), current.info.hostname);
+    keyValue(tr("ui.field.uptime").c_str(), durationText(current.info.uptimeSeconds));
+    keyValue(tr("ui.field.auth").c_str(),
+             tr(current.info.authenticationRequired ? "ui.value.bearerToken" : "ui.value.disabled"));
     spacer(4.0f);
     if (current.info.zapretAvailable)
     {
-        pill("zapret ready", colors.success);
+        pill(tr("ui.value.zapretReady").c_str(), colors.success);
         ImGui::SameLine();
         mutedText(strings::join(current.info.zapretTools, ", ").c_str());
     }
     else
     {
-        pill("zapret missing", colors.danger);
+        pill(tr("ui.value.zapretMissing").c_str(), colors.danger);
         spacer(4.0f);
-        mutedText("Set zapret.installDirectory in the daemon config.");
+        mutedText(tr("ui.dash.zapretHint").c_str());
     }
     cardEnd();
 
     // --- activity card
     ImGui::SetCursorScreenPos(ImVec2(origin.x, origin.y + CARD_HEIGHT + 16.0f));
     cardBegin("##activity", ImVec2(width, 0.0f));
-    sectionTitle("RECENT ACTIVITY");
+    sectionTitle(tr("ui.dash.activity").c_str());
     const std::size_t limit = std::min<std::size_t>(current.logs.size(), 40);
     for (std::size_t index = current.logs.size(); index > current.logs.size() - limit; --index)
     {
@@ -196,7 +182,7 @@ void App::renderDashboard()
         ImGui::PopStyleColor();
         ImGui::SameLine(110.0f);
         ImGui::PushStyleColor(ImGuiCol_Text, colorVec4(levelColor(entry.level)));
-        ImGui::Text("%-6s", std::string{toString(entry.level)}.c_str());
+        ImGui::Text("%-7s", std::string{labels::logLevel(entry.level)}.c_str());
         ImGui::PopStyleColor();
         ImGui::SameLine(170.0f);
         ImGui::PushStyleColor(ImGuiCol_Text, colorVec4(colors.textMuted));
@@ -207,7 +193,7 @@ void App::renderDashboard()
     }
     if (limit == 0)
     {
-        mutedText("No log entries yet.");
+        mutedText(tr("ui.logs.empty").c_str());
     }
     cardEnd();
 }

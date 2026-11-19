@@ -1,8 +1,11 @@
 #include <deimos/model/config.hpp>
 
+#include <deimos/model/diagnostic_i18n.hpp>
+
 #include <exception>
 #include <utility>
 
+#include <deimos/support/i18n.hpp>
 #include <deimos/support/platform.hpp>
 #include <deimos/support/strings.hpp>
 
@@ -60,6 +63,7 @@ detail::Json writeDaemonSettings(const DaemonSettings& settings)
     detail::Json node{
         {"listenAddress", settings.listenAddress},
         {"port", settings.port},
+        {"language", settings.language},
         {"allowRemoteClients", settings.allowRemoteClients},
         {"requireAuthentication", settings.requireAuthentication},
         {"logLevel", std::string{toString(settings.logLevel)}},
@@ -122,6 +126,19 @@ detail::Json writeZapretSettings(const ZapretSettings& settings)
 void readDaemonSettings(const detail::Json& node, DaemonSettings& settings, std::vector<Diagnostic>& diagnostics)
 {
     settings.listenAddress = node.value("listenAddress", settings.listenAddress);
+
+    const std::string language = node.value("language", settings.language);
+    if (i18n::parseLanguage(language, i18n::Language::system) == i18n::Language::system &&
+        !strings::equalsIgnoreCase(strings::trim(language), "auto") &&
+        !strings::equalsIgnoreCase(strings::trim(language), "system"))
+    {
+        diagnostics.push_back(errorAt("config.daemon.language.unknown", "daemon.language", {language}));
+    }
+    else
+    {
+        settings.language = language;
+    }
+
     settings.allowRemoteClients = node.value("allowRemoteClients", settings.allowRemoteClients);
     settings.requireAuthentication = node.value("requireAuthentication", settings.requireAuthentication);
     settings.tokenFile = node.value("tokenFile", settings.tokenFile);
@@ -138,8 +155,7 @@ void readDaemonSettings(const detail::Json& node, DaemonSettings& settings, std:
     }
     else
     {
-        diagnostics.push_back(
-            error("config.daemon.port.range", "daemon port must be within 1..65535", "daemon.port"));
+        diagnostics.push_back(errorAt("config.daemon.port.range", "daemon.port"));
     }
 
     const std::string levelText = node.value("logLevel", std::string{toString(settings.logLevel)});
@@ -150,8 +166,7 @@ void readDaemonSettings(const detail::Json& node, DaemonSettings& settings, std:
     }
     else
     {
-        diagnostics.push_back(
-            error("config.daemon.log_level.unknown", "unknown log level '" + levelText + "'", "daemon.logLevel"));
+        diagnostics.push_back(errorAt("config.daemon.log_level.unknown", "daemon.logLevel", {levelText}));
     }
 
     const std::int64_t historySize = node.value("logHistorySize", static_cast<std::int64_t>(settings.logHistorySize));
@@ -161,9 +176,7 @@ void readDaemonSettings(const detail::Json& node, DaemonSettings& settings, std:
     }
     else
     {
-        diagnostics.push_back(error("config.daemon.log_history.range",
-                                    "logHistorySize must be within 100..100000",
-                                    "daemon.logHistorySize"));
+        diagnostics.push_back(errorAt("config.daemon.log_history.range", "daemon.logHistorySize"));
     }
 }
 
@@ -277,14 +290,14 @@ Status deserializeConfig(std::string_view text, DeimosConfig& out, std::vector<D
     }
     catch (const std::exception& exception)
     {
-        diagnostics.push_back(error("config.parse_error", exception.what()));
-        return Status::failure(ErrorCode::configuration, "configuration is not valid JSON", exception.what());
+        diagnostics.push_back(errorAt("config.parse_error", "", {exception.what()}));
+        return Status::failure(ErrorCode::configuration, i18n::tr("err.config.invalid_json"), exception.what());
     }
 
     if (!root.is_object())
     {
-        diagnostics.push_back(error("config.invalid_root", "configuration must be a JSON object"));
-        return Status::failure(ErrorCode::configuration, "configuration must be a JSON object");
+        diagnostics.push_back(errorAt("config.invalid_root", ""));
+        return Status::failure(ErrorCode::configuration, i18n::tr("err.config.not_an_object"));
     }
 
     DeimosConfig config = defaultConfig();
@@ -295,12 +308,10 @@ Status deserializeConfig(std::string_view text, DeimosConfig& out, std::vector<D
         const int schemaVersion = root.value("schemaVersion", 1);
         if (schemaVersion > 1)
         {
-            diagnostics.push_back(error("config.schema.too_new",
-                                        "configuration was written by a newer Deimos version (schema " +
-                                            std::to_string(schemaVersion) + ")",
-                                        "schemaVersion"));
+            diagnostics.push_back(
+                errorAt("config.schema.too_new", "schemaVersion", {std::to_string(schemaVersion)}));
             return Status::failure(ErrorCode::notSupported,
-                                   "unsupported configuration schema version",
+                                   i18n::tr("err.config.schema"),
                                    std::to_string(schemaVersion));
         }
         config.schemaVersion = schemaVersion;
@@ -322,7 +333,7 @@ Status deserializeConfig(std::string_view text, DeimosConfig& out, std::vector<D
         {
             if (!profilesNode->is_array())
             {
-                diagnostics.push_back(error("config.profiles.invalid", "'profiles' must be an array", "profiles"));
+                diagnostics.push_back(errorAt("config.profiles.invalid", "profiles"));
             }
             else
             {
@@ -333,7 +344,7 @@ Status deserializeConfig(std::string_view text, DeimosConfig& out, std::vector<D
                     auto profile = detail::parseProfileJson(profileNode, path, diagnostics);
                     if (profile.id.empty())
                     {
-                        diagnostics.push_back(error("profile.id.empty", "profile id must not be empty", path + ".id"));
+                        diagnostics.push_back(errorAt("profile.id.empty", path + ".id"));
                     }
                     config.profiles.push_back(std::move(profile));
                     ++index;
@@ -343,8 +354,8 @@ Status deserializeConfig(std::string_view text, DeimosConfig& out, std::vector<D
     }
     catch (const std::exception& exception)
     {
-        diagnostics.push_back(error("config.invalid_type", exception.what()));
-        return Status::failure(ErrorCode::configuration, "configuration has a field of the wrong type", exception.what());
+        diagnostics.push_back(errorAt("config.invalid_type", "", {exception.what()}));
+        return Status::failure(ErrorCode::configuration, i18n::tr("err.config.wrong_type"), exception.what());
     }
 
     const auto validationDiagnostics = validateConfig(config);
@@ -354,7 +365,7 @@ Status deserializeConfig(std::string_view text, DeimosConfig& out, std::vector<D
     if (hasErrors(diagnostics))
     {
         return Status::failure(ErrorCode::configuration,
-                               "configuration failed validation",
+                               i18n::tr("err.config.invalid"),
                                formatDiagnostics(diagnostics));
     }
     return Status::ok();
@@ -373,9 +384,9 @@ std::vector<Diagnostic> validateConfig(const DeimosConfig& config)
         {
             if (config.profiles[other].id == config.profiles[index].id)
             {
-                diagnostics.push_back(error("config.profiles.duplicate_id",
-                                            "duplicate profile id '" + config.profiles[index].id + "'",
-                                            "profiles[" + std::to_string(index) + "].id"));
+                diagnostics.push_back(errorAt("config.profiles.duplicate_id",
+                                              "profiles[" + std::to_string(index) + "].id",
+                                              {config.profiles[index].id}));
             }
         }
     }
@@ -384,56 +395,45 @@ std::vector<Diagnostic> validateConfig(const DeimosConfig& config)
                             config.daemon.listenAddress == "::1";
     if (!isLoopback && !config.daemon.allowRemoteClients)
     {
-        diagnostics.push_back(error("config.daemon.remote_not_allowed",
-                                    "listening on " + config.daemon.listenAddress +
-                                        " requires allowRemoteClients=true",
-                                    "daemon.listenAddress"));
+        diagnostics.push_back(errorAt("config.daemon.remote_not_allowed",
+                                      "daemon.listenAddress",
+                                      {config.daemon.listenAddress}));
     }
     if (!isLoopback && !config.daemon.requireAuthentication)
     {
-        diagnostics.push_back(error("config.daemon.remote_without_auth",
-                                    "remote access must stay authenticated; enable requireAuthentication",
-                                    "daemon.requireAuthentication"));
+        diagnostics.push_back(errorAt("config.daemon.remote_without_auth", "daemon.requireAuthentication"));
     }
 
     if (config.daemon.enableTls && (config.daemon.tlsCertificateFile.empty() || config.daemon.tlsPrivateKeyFile.empty()))
     {
-        diagnostics.push_back(error("config.daemon.tls.incomplete",
-                                    "TLS requires both a certificate and a private key",
-                                    "daemon.enableTls"));
+        diagnostics.push_back(errorAt("config.daemon.tls.incomplete", "daemon.enableTls"));
     }
 
     if (!config.daemon.activeProfileId.empty() && config.findProfile(config.daemon.activeProfileId) == nullptr)
     {
-        diagnostics.push_back(error("config.daemon.active_profile.missing",
-                                    "active profile '" + config.daemon.activeProfileId + "' does not exist",
-                                    "daemon.activeProfileId"));
+        diagnostics.push_back(errorAt("config.daemon.active_profile.missing",
+                                      "daemon.activeProfileId",
+                                      {config.daemon.activeProfileId}));
     }
     else if (const Profile* active = config.findProfile(config.daemon.activeProfileId);
              active != nullptr && !active->enabled)
     {
-        diagnostics.push_back(warning("config.daemon.active_profile.disabled",
-                                      "the active profile '" + active->id + "' is disabled",
-                                      "daemon.activeProfileId"));
+        diagnostics.push_back(warningAt("config.daemon.active_profile.disabled",
+                                        "daemon.activeProfileId",
+                                        {active->id}));
     }
 
     if (config.engine.maxRestarts < 0 || config.engine.maxRestarts > 100)
     {
-        diagnostics.push_back(error("config.engine.max_restarts.range",
-                                    "maxRestarts must be within 0..100",
-                                    "engine.maxRestarts"));
+        diagnostics.push_back(errorAt("config.engine.max_restarts.range", "engine.maxRestarts"));
     }
     if (config.engine.restartBackoffMs < 0 || config.engine.restartBackoffMs > 600000)
     {
-        diagnostics.push_back(error("config.engine.backoff.range",
-                                    "restartBackoffMs must be within 0..600000",
-                                    "engine.restartBackoffMs"));
+        diagnostics.push_back(errorAt("config.engine.backoff.range", "engine.restartBackoffMs"));
     }
     if (config.engine.stopTimeoutMs < 100 || config.engine.stopTimeoutMs > 120000)
     {
-        diagnostics.push_back(error("config.engine.stop_timeout.range",
-                                    "stopTimeoutMs must be within 100..120000",
-                                    "engine.stopTimeoutMs"));
+        diagnostics.push_back(errorAt("config.engine.stop_timeout.range", "engine.stopTimeoutMs"));
     }
 
     return diagnostics;

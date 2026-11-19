@@ -4,6 +4,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include <deimos/support/i18n.hpp>
 #include <deimos/support/strings.hpp>
 
 namespace deimos
@@ -132,14 +133,14 @@ Status withJson(std::string_view text, ParseFn&& parse)
         const Json root = Json::parse(text);
         if (!root.is_object())
         {
-            return Status::failure(ErrorCode::invalidArgument, "response is not a JSON object");
+            return Status::failure(ErrorCode::invalidArgument, i18n::tr("err.protocol.notObject"));
         }
         parse(root);
         return Status::ok();
     }
     catch (const std::exception& exception)
     {
-        return Status::failure(ErrorCode::invalidArgument, "cannot parse response", exception.what());
+        return Status::failure(ErrorCode::invalidArgument, i18n::tr("err.protocol.parse"), exception.what());
     }
 }
 
@@ -476,11 +477,11 @@ Status parseDiagnostics(std::string_view text, std::vector<Diagnostic>& out)
                 return Status::ok();
             }
         }
-        return Status::failure(ErrorCode::invalidArgument, "response does not contain diagnostics");
+        return Status::failure(ErrorCode::invalidArgument, i18n::tr("err.protocol.noDiagnostics"));
     }
     catch (const std::exception& exception)
     {
-        return Status::failure(ErrorCode::invalidArgument, "cannot parse diagnostics", exception.what());
+        return Status::failure(ErrorCode::invalidArgument, i18n::tr("err.protocol.parseDiagnostics"), exception.what());
     }
 }
 
@@ -492,7 +493,7 @@ Status parseErrorPayload(std::string_view text, Error& out)
         const auto error = root.find("error");
         if (error == root.end() || !error->is_object())
         {
-            return Status::failure(ErrorCode::invalidArgument, "response does not contain an error payload");
+            return Status::failure(ErrorCode::invalidArgument, i18n::tr("err.protocol.noErrorPayload"));
         }
 
         const std::string codeText = error->value("code", std::string{"internal_error"});
@@ -521,7 +522,7 @@ Status parseErrorPayload(std::string_view text, Error& out)
     }
     catch (const std::exception& exception)
     {
-        return Status::failure(ErrorCode::invalidArgument, "cannot parse error payload", exception.what());
+        return Status::failure(ErrorCode::invalidArgument, i18n::tr("err.protocol.parseErrorPayload"), exception.what());
     }
 }
 

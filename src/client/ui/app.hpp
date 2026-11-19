@@ -78,6 +78,9 @@ public:
     void frame();
     void shutdown();
 
+    /// Language requested on the command line; wins over the stored preference.
+    void setLanguageOverride(std::string code);
+
 private:
     enum class View
     {
@@ -99,6 +102,7 @@ private:
     UiSnapshot snapshot() const;
     EndpointRecord activeEndpoint() const;
     void selectEndpoint(const std::string& name);
+    void setLanguageSetting(const std::string& code);
     void loadState();
     void persistState();
 
@@ -158,6 +162,8 @@ private:
     char newEndpointUrl_[256] = {};
     char newEndpointToken_[256] = {};
     std::string logsFilter_;
+    std::string languageSetting_{"auto"};
+    std::string languageOverride_;
     bool logsAutoScroll_ = true;
 };
 

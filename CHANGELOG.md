@@ -7,10 +7,28 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- English and Russian localisation for the desktop interface, the CLI, both command line
+  helps, the daemon logs, the REST API error payloads and every validation diagnostic.
+  The language follows `DEIMOS_LANG`, `LC_ALL`/`LC_MESSAGES`/`LANG` or the system UI
+  language, and can be pinned per process with `--lang auto|en|ru`. The interface switches
+  language without a restart and remembers the choice in `ui.json`.
+- `daemon.language` (`auto`, `en`, `ru`) pins the language of the daemon's diagnostics and
+  logs; `deimosd --lang` overrides it for one run.
+- Project assets: `assets/logo.png`, `assets/icon.png` (283x300) and
+  `assets/background.png` (1200x300), with `assets/generate-assets.ps1` to regenerate them.
+- [docs/localization.md](docs/localization.md), a guide to the message catalog.
+
 ### Fixed
 
 - `deimosd --validate-config` no longer creates a configuration file when the target path
-  is missing. Loading config is now read-only; only daemon startup persists defaults.
+  is missing. Loading the configuration is now read-only; only daemon startup persists the
+  defaults.
+- The engine state pill in the top bar showed the raw internal state instead of its
+  translated label.
+- `formatTimestamp()` no longer trips `-Wformat-truncation` on GCC, which failed the Linux
+  CI job in every branch.
 
 ## [0.1.0] - 2026-11-18
 

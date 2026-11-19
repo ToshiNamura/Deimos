@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <utility>
 
+#include <deimos/model/diagnostic_i18n.hpp>
 #include <deimos/support/strings.hpp>
 
 namespace deimos
@@ -157,9 +158,9 @@ void appendListArguments(ArgumentList& arguments,
         {
             if (paths.any() && !referencedFileExists(entry, paths, workingDirectory))
             {
-                diagnostics.push_back(warning("zapret.list.missing",
-                                              std::string{"referenced "} + field + " file not found: " + entry,
-                                              std::string{roundPath} + "." + field));
+                diagnostics.push_back(warningAt("zapret.list.missing",
+                                                std::string{roundPath} + "." + field,
+                                                {std::string{field}, entry}));
             }
             arguments.option(option, entry);
         }
@@ -211,9 +212,8 @@ void appendDesyncArguments(ArgumentList& arguments,
     {
         if (round.fakePayload->kind == FakePayloadKind::file && round.fakePayload->value.empty())
         {
-            diagnostics.push_back(error("zapret.fake_payload.missing",
-                                        "fake desync needs a payload file or an inline hex blob",
-                                        std::string{roundPath} + ".fakePayload"));
+            diagnostics.push_back(errorAt("zapret.fake_payload.missing",
+                                          std::string{roundPath} + ".fakePayload"));
             return;
         }
         arguments.option(fakeOptionFor(round), payloadValue(*round.fakePayload));
@@ -281,9 +281,7 @@ LaunchSpec buildWinwsLaunch(const Profile& profile,
 
     if (tcpPorts.empty() && udpPorts.empty())
     {
-        diagnostics.push_back(error("zapret.windivert.no_ports",
-                                    "winws needs at least one TCP or UDP port to capture",
-                                    "profiles." + profile.id));
+        diagnostics.push_back(errorAt("zapret.windivert.no_ports", "profiles." + profile.id));
     }
 
     ArgumentList arguments{launch.arguments};
@@ -350,9 +348,7 @@ std::vector<LaunchSpec> buildMultiProcessLaunches(const Profile& profile,
         {
             if (round.modes.empty())
             {
-                diagnostics.push_back(error("zapret.tpws.no_mode",
-                                            "tpws needs a split or disorder round",
-                                            roundPath + ".modes"));
+                diagnostics.push_back(errorAt("zapret.tpws.no_mode", roundPath + ".modes"));
             }
             // tpws always splits at split-pos; --disorder reorders the two segments.
             arguments.option("--split-pos", round.splitPos.value_or(1));
@@ -362,9 +358,7 @@ std::vector<LaunchSpec> buildMultiProcessLaunches(const Profile& profile,
             }
             if (round.splitSeqOverlap.has_value())
             {
-                diagnostics.push_back(warning("zapret.tpws.seqovl_ignored",
-                                              "tpws ignores sequence overlap; use tlsrec or split-pos instead",
-                                              roundPath + ".splitSeqOverlap"));
+                diagnostics.push_back(warningAt("zapret.tpws.seqovl_ignored", roundPath + ".splitSeqOverlap"));
             }
         }
         else
@@ -402,15 +396,14 @@ BuildResult buildLaunches(const Profile& profile,
 
     if (!profile.enabled)
     {
-        result.diagnostics.push_back(warning("zapret.profile.disabled",
-                                             "profile '" + profile.id + "' is disabled",
-                                             "profiles." + profile.id));
+        result.diagnostics.push_back(
+            warningAt("zapret.profile.disabled", "profiles." + profile.id, {profile.id}));
     }
 
     if (profile.rounds.empty())
     {
         result.diagnostics.push_back(
-            error("zapret.profile.no_rounds", "profile has no desync rounds", "profiles." + profile.id + ".rounds"));
+            errorAt("zapret.profile.no_rounds", "profiles." + profile.id + ".rounds"));
         return result;
     }
 
@@ -433,23 +426,18 @@ BuildResult buildLaunches(const Profile& profile,
 
     if (tool == ToolKind::winws && !IS_WINDOWS)
     {
-        result.diagnostics.push_back(warning("zapret.tool.platform_mismatch",
-                                             "winws only runs on Windows",
-                                             "profiles." + profile.id + ".tool"));
+        result.diagnostics.push_back(warningAt("zapret.tool.windows_only", "profiles." + profile.id + ".tool"));
     }
     if ((tool == ToolKind::nfqws || tool == ToolKind::tpws) && IS_WINDOWS)
     {
-        result.diagnostics.push_back(warning("zapret.tool.platform_mismatch",
-                                             "nfqws and tpws only run on Linux and macOS",
-                                             "profiles." + profile.id + ".tool"));
+        result.diagnostics.push_back(warningAt("zapret.tool.unix_only", "profiles." + profile.id + ".tool"));
     }
 
     if (!toolExecutableOrFallback(paths, tool).empty() && !paths.has(tool))
     {
-        result.diagnostics.push_back(warning("zapret.tool.not_found",
-                                             std::string{"zapret '"} + std::string{toCliToken(tool)} +
-                                                 "' was not found; the daemon will fail to start this profile",
-                                             "profiles." + profile.id + ".tool"));
+        result.diagnostics.push_back(warningAt("zapret.tool.not_found",
+                                               "profiles." + profile.id + ".tool",
+                                               {std::string{toCliToken(tool)}}));
     }
 
     if (!workingDirectory.empty())
@@ -457,9 +445,9 @@ BuildResult buildLaunches(const Profile& profile,
         std::error_code code;
         if (!std::filesystem::is_directory(std::filesystem::path{workingDirectory}, code))
         {
-            result.diagnostics.push_back(warning("zapret.working_directory.missing",
-                                                 "working directory does not exist: " + std::string{workingDirectory},
-                                                 "zapret.workingDirectory"));
+            result.diagnostics.push_back(warningAt("zapret.working_directory.missing",
+                                                   "zapret.workingDirectory",
+                                                   {std::string{workingDirectory}}));
         }
     }
 

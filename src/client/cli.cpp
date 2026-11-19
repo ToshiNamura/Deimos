@@ -13,6 +13,8 @@
 
 #include <deimos/model/config.hpp>
 #include <deimos/model/profile.hpp>
+#include <deimos/support/i18n.hpp>
+#include <deimos/support/labels.hpp>
 #include <deimos/support/platform.hpp>
 #include <deimos/support/strings.hpp>
 #include <deimos/transport/daemon_client.hpp>
@@ -77,7 +79,8 @@ struct CliArguments
 CliArguments parseArguments(int argc, char** argv)
 {
     static const std::set<std::string> VALUE_OPTIONS{
-        "endpoint", "token", "token-file", "profile", "limit", "level", "output", "name", "url", "timeout", "config"};
+        "endpoint", "token", "token-file", "profile", "limit", "level", "output", "name", "url", "timeout", "config",
+        "lang"};
 
     CliArguments parsed;
     for (int index = 1; index < argc; ++index)
@@ -184,7 +187,8 @@ bool saveCliState(const CliState& state)
     std::string errorMessage;
     if (!deimos::platform::writeFileAtomically(cliStatePath(), root.dump(2) + "\n", errorMessage))
     {
-        std::cerr << "deimos: cannot write " << cliStatePath().string() << ": " << errorMessage << "\n";
+        std::cerr << "deimos: "
+                  << deimos::i18n::tr("cli.error.stateWrite", {cliStatePath().string(), errorMessage}) << "\n";
         return false;
     }
     return true;
@@ -293,7 +297,8 @@ deimos::DaemonClient makeClient(const GlobalOptions& options)
     std::string errorMessage;
     if (!deimos::parseEndpoint(options.endpoint, endpoint, errorMessage))
     {
-        std::cerr << "deimos: invalid endpoint '" << options.endpoint << "': " << errorMessage << "\n";
+        std::cerr << "deimos: "
+                  << deimos::i18n::tr("cli.error.invalidEndpoint", {options.endpoint, errorMessage}) << "\n";
     }
 
     deimos::ClientOptions clientOptions;
@@ -305,39 +310,37 @@ deimos::DaemonClient makeClient(const GlobalOptions& options)
 
 std::string formatDuration(std::int64_t seconds)
 {
-    if (seconds < 0)
-    {
-        return "-";
-    }
-    const std::int64_t hours = seconds / 3600;
-    const std::int64_t minutes = (seconds % 3600) / 60;
-    const std::int64_t remainder = seconds % 60;
+    return seconds < 0 ? std::string{"-"} : deimos::labels::duration(seconds);
+}
 
-    std::ostringstream stream;
-    if (hours > 0)
+/// Width in UTF-8 code points, so translated labels line up regardless of encoding.
+std::size_t displayWidth(std::string_view text)
+{
+    std::size_t width = 0;
+    for (const char character : text)
     {
-        stream << hours << "h ";
+        const auto byte = static_cast<unsigned char>(character);
+        if ((byte & 0xC0U) != 0x80U)
+        {
+            ++width;
+        }
     }
-    if (hours > 0 || minutes > 0)
-    {
-        stream << minutes << "m ";
-    }
-    stream << remainder << "s";
-    return stream.str();
+    return width;
 }
 
 std::string padRight(const std::string& text, std::size_t width)
 {
-    if (text.size() >= width)
+    const std::size_t current = displayWidth(text);
+    if (current >= width)
     {
         return text;
     }
-    return text + std::string(width - text.size(), ' ');
+    return text + std::string(width - current, ' ');
 }
 
 std::string yesNo(bool value)
 {
-    return value ? "yes" : "no";
+    return deimos::labels::yesNo(value);
 }
 
 int fail(const deimos::Error& error)
@@ -348,46 +351,7 @@ int fail(const deimos::Error& error)
 
 void printUsage()
 {
-    std::cout << R"(deimos - Deimos client: desktop interface and command line
-
-Usage: deimos [global options] <command> [arguments]
-       deimos --gui            open the graphical interface
-       deimos                  opens the graphical interface when started without a terminal
-
-Global options:
-  --endpoint URL      Daemon endpoint (default: $DEIMOS_ENDPOINT or http://127.0.0.1:8787)
-  --token TOKEN       Bearer token (default: $DEIMOS_TOKEN or the token file)
-  --token-file PATH   Read the bearer token from a file
-  --timeout SECONDS   Request timeout, default 10
-  --json              Print raw JSON instead of tables
-  --gui               Start the desktop interface instead of running a command
-  -h, --help          Show this help
-  -v, --version       Show the client version
-
-Commands:
-  status                      Daemon, zapret and engine state
-  start [--profile ID]        Start the engine with the active or given profile
-  stop                        Stop the engine
-  restart [--profile ID]      Restart the engine
-  profiles list               List profiles
-  profiles show ID            Print one profile as JSON
-  profiles preview ID         Show the zapret command lines for a profile
-  profiles activate ID        Make a profile active (restarts the engine when running)
-  profiles import FILE        Create or replace a profile from a JSON file
-  profiles export ID          Print a profile as JSON (--output FILE to write it)
-  profiles delete ID          Delete a profile
-  logs [--limit N]            Recent log entries
-       [--level L] [--follow]
-  config show                 Print the daemon configuration
-  config path                 Print the local configuration path
-  doctor                      Check connectivity, authentication and zapret
-  endpoints list              List saved endpoints
-  endpoints add NAME URL [--token-file PATH]
-  endpoints use NAME          Select the default endpoint
-  endpoints remove NAME       Delete a saved endpoint
-
-Exit codes: 0 ok, 1 error, 2 usage, 3 connection, 4 authentication
-)";
+    std::cout << i18n::tr("cli.usage");
 }
 
 int commandStatus(const CliArguments& arguments, const GlobalOptions& options)
@@ -412,40 +376,47 @@ int commandStatus(const CliArguments& arguments, const GlobalOptions& options)
     }
 
     const deimos::DaemonInfo& info = status.value();
-    std::cout << "Endpoint   " << client.endpoint().describe() << "\n";
-    std::cout << "Daemon     " << info.version << " on " << info.platform << "/" << info.architecture << " ("
-              << info.hostname << ")\n";
-    std::cout << "Uptime     " << formatDuration(info.uptimeSeconds) << "\n";
-    std::cout << "Auth       " << (info.authenticationRequired ? "bearer token required" : "disabled") << "\n";
-    std::cout << "zapret     "
-              << (info.zapretAvailable ? deimos::strings::join(info.zapretTools, ", ") : std::string{"not detected"})
+    std::cout << padRight(deimos::i18n::tr("cli.status.endpoint"), 11) << client.endpoint().describe() << "\n";
+    std::cout << padRight(deimos::i18n::tr("cli.status.daemon"), 11)
+              << deimos::i18n::tr("cli.status.daemonLine",
+                                  {info.version, info.platform, info.architecture, info.hostname})
+              << "\n";
+    std::cout << padRight(deimos::i18n::tr("cli.status.uptime"), 11) << formatDuration(info.uptimeSeconds) << "\n";
+    std::cout << padRight(deimos::i18n::tr("cli.status.auth"), 11)
+              << deimos::i18n::tr(info.authenticationRequired ? "cli.status.bearer" : "cli.status.disabled") << "\n";
+    std::cout << padRight(deimos::i18n::tr("cli.status.zapret"), 11)
+              << (info.zapretAvailable ? deimos::strings::join(info.zapretTools, ", ")
+                                       : deimos::i18n::tr("cli.status.notDetected"))
               << "\n";
     if (!info.zapretBaseDirectory.empty())
     {
-        std::cout << "           " << info.zapretBaseDirectory << "\n";
+        std::cout << std::string(11, ' ') << info.zapretBaseDirectory << "\n";
     }
 
     const deimos::EngineSnapshot& engine = info.engine;
-    std::cout << "Engine     " << deimos::toString(engine.state);
+    std::cout << padRight(deimos::i18n::tr("cli.status.engine"), 11) << deimos::labels::engineState(engine.state);
     if (!engine.activeProfileId.empty())
     {
-        std::cout << " (profile " << engine.activeProfileId << ")";
+        std::cout << deimos::i18n::tr("cli.engine.profileSuffix", {engine.activeProfileId});
     }
     std::cout << "\n";
 
     if (engine.state == deimos::EngineState::running)
     {
-        std::cout << "Running    " << formatDuration(engine.uptimeSeconds) << ", restarts " << engine.restartCount
+        std::cout << padRight(deimos::i18n::tr("cli.status.running"), 11)
+                  << deimos::i18n::tr("cli.status.runningLine",
+                                      {formatDuration(engine.uptimeSeconds), std::to_string(engine.restartCount)})
                   << "\n";
     }
     if (!engine.lastError.empty())
     {
-        std::cout << "Last error " << engine.lastError << "\n";
+        std::cout << padRight(deimos::i18n::tr("cli.status.lastError"), 11) << engine.lastError << "\n";
     }
     for (const deimos::LaunchInfo& launch : engine.launches)
     {
-        std::cout << "Process    " << launch.label << " (pid " << launch.pid << ")\n";
-        std::cout << "           " << launch.command << "\n";
+        std::cout << padRight(deimos::i18n::tr("cli.status.process"), 11)
+                  << deimos::i18n::tr("cli.status.processLine", {launch.label, std::to_string(launch.pid)}) << "\n";
+        std::cout << std::string(11, ' ') << launch.command << "\n";
     }
 
     (void)arguments;
@@ -465,19 +436,20 @@ int printEngineResult(const deimos::Result<deimos::EngineSnapshot>& result, cons
     }
 
     const deimos::EngineSnapshot& snapshot = result.value();
-    std::cout << "engine " << deimos::toString(snapshot.state);
+    std::cout << deimos::i18n::tr("cli.engine.summary", {std::string{deimos::labels::engineState(snapshot.state)}});
     if (!snapshot.activeProfileId.empty())
     {
-        std::cout << " with profile " << snapshot.activeProfileId;
+        std::cout << deimos::i18n::tr("cli.engine.withProfile", {snapshot.activeProfileId});
     }
     std::cout << "\n";
     for (const deimos::LaunchInfo& launch : snapshot.launches)
     {
-        std::cout << "  " << launch.label << " (pid " << launch.pid << ")\n";
+        std::cout << "  " << deimos::i18n::tr("cli.status.processLine", {launch.label, std::to_string(launch.pid)})
+                  << "\n";
     }
     for (const deimos::Diagnostic& diagnostic : snapshot.diagnostics)
     {
-        std::cout << "  " << deimos::toString(diagnostic.severity) << ": " << diagnostic.message << "\n";
+        std::cout << "  " << deimos::labels::severity(diagnostic.severity) << ": " << diagnostic.message << "\n";
     }
     return EXIT_OK;
 }
@@ -507,17 +479,19 @@ int commandProfiles(const CliArguments& arguments, const GlobalOptions& options)
         }
         if (profiles.value().empty())
         {
-            std::cout << "no profiles\n";
+            std::cout << deimos::i18n::tr("cli.profiles.none") << "\n";
             return EXIT_OK;
         }
 
-        std::cout << padRight("ID", 24) << padRight("NAME", 28) << padRight("TOOL", 8) << padRight("ROUNDS", 8)
-                  << "ENABLED\n";
+        std::cout << padRight(deimos::i18n::tr("cli.profiles.id"), 24) << padRight(deimos::i18n::tr("cli.profiles.name"), 28)
+                  << padRight(deimos::i18n::tr("cli.profiles.tool"), 15)
+                  << padRight(deimos::i18n::tr("cli.profiles.rounds"), 9) << deimos::i18n::tr("cli.profiles.enabled")
+                  << "\n";
         for (const deimos::ProfileSummary& summary : profiles.value())
         {
             std::cout << padRight(summary.id, 24) << padRight(summary.name, 28)
-                      << padRight(std::string{deimos::toCliToken(summary.tool)}, 8)
-                      << padRight(std::to_string(summary.roundCount), 8) << yesNo(summary.enabled) << "\n";
+                      << padRight(std::string{deimos::labels::tool(summary.tool)}, 15)
+                      << padRight(std::to_string(summary.roundCount), 9) << yesNo(summary.enabled) << "\n";
         }
         return EXIT_OK;
     }
@@ -525,7 +499,7 @@ int commandProfiles(const CliArguments& arguments, const GlobalOptions& options)
     const std::string id = arguments.positionals.size() > 2 ? arguments.positionals[2] : std::string{};
     if (id.empty() && subcommand != "import")
     {
-        std::cerr << "deimos: profiles " << subcommand << " needs a profile id\n";
+        std::cerr << "deimos: " << deimos::i18n::tr("cli.error.profileIdRequired", {subcommand}) << "\n";
         return EXIT_USAGE;
     }
 
@@ -564,7 +538,7 @@ int commandProfiles(const CliArguments& arguments, const GlobalOptions& options)
         }
         for (const deimos::Diagnostic& diagnostic : preview.value().diagnostics)
         {
-            std::cout << "  " << deimos::toString(diagnostic.severity) << ": " << diagnostic.message << "\n";
+            std::cout << "  " << deimos::labels::severity(diagnostic.severity) << ": " << diagnostic.message << "\n";
         }
         return EXIT_OK;
     }
@@ -582,7 +556,7 @@ int commandProfiles(const CliArguments& arguments, const GlobalOptions& options)
         {
             return fail(status.error());
         }
-        std::cout << "profile " << id << " deleted\n";
+        std::cout << deimos::i18n::tr("cli.profiles.deleted", {id}) << "\n";
         return EXIT_OK;
     }
 
@@ -606,7 +580,7 @@ int commandProfiles(const CliArguments& arguments, const GlobalOptions& options)
             std::cerr << "deimos: " << errorMessage << "\n";
             return EXIT_FAILURE_CODE;
         }
-        std::cout << "written to " << output << "\n";
+        std::cout << deimos::i18n::tr("cli.export.written", {output}) << "\n";
         return EXIT_OK;
     }
 
@@ -615,13 +589,13 @@ int commandProfiles(const CliArguments& arguments, const GlobalOptions& options)
         const std::string file = arguments.positionals.size() > 2 ? arguments.positionals[2] : std::string{};
         if (file.empty())
         {
-            std::cerr << "deimos: profiles import needs a file\n";
+            std::cerr << "deimos: " << deimos::i18n::tr("cli.error.importNeedsFile") << "\n";
             return EXIT_USAGE;
         }
         const auto content = deimos::platform::readFile(file);
         if (!content.has_value())
         {
-            std::cerr << "deimos: cannot read " << file << "\n";
+            std::cerr << "deimos: " << deimos::i18n::tr("cli.error.cannotRead", {file}) << "\n";
             return EXIT_FAILURE_CODE;
         }
 
@@ -639,11 +613,11 @@ int commandProfiles(const CliArguments& arguments, const GlobalOptions& options)
         {
             return fail(saved.error());
         }
-        std::cout << "profile " << saved.value().id << " saved\n";
+        std::cout << deimos::i18n::tr("cli.profiles.saved", {saved.value().id}) << "\n";
         return EXIT_OK;
     }
 
-    std::cerr << "deimos: unknown profiles subcommand '" << subcommand << "'\n";
+    std::cerr << "deimos: " << deimos::i18n::tr("cli.error.unknownProfiles", {subcommand}) << "\n";
     return EXIT_USAGE;
 }
 
@@ -666,7 +640,7 @@ int commandLogs(const CliArguments& arguments, const GlobalOptions& options)
     {
         if (!deimos::parseLogLevel(text, level))
         {
-            std::cerr << "deimos: unknown log level '" << text << "'\n";
+            std::cerr << "deimos: " << deimos::i18n::tr("cli.error.unknownLevel", {text}) << "\n";
             return EXIT_USAGE;
         }
     }
@@ -679,8 +653,9 @@ int commandLogs(const CliArguments& arguments, const GlobalOptions& options)
     }
     for (const deimos::LogEntry& entry : entries.value())
     {
-        std::cout << deimos::formatTimestamp(entry.timestamp) << " " << padRight(std::string{deimos::toString(entry.level)}, 6)
-                  << " [" << entry.source << "] " << entry.message << "\n";
+        std::cout << deimos::formatTimestamp(entry.timestamp) << " "
+                  << padRight(std::string{deimos::labels::logLevel(entry.level)}, 7) << " [" << entry.source << "] "
+                  << entry.message << "\n";
         lastSequence = entry.sequence;
     }
 
@@ -704,8 +679,8 @@ int commandLogs(const CliArguments& arguments, const GlobalOptions& options)
         for (const deimos::LogEntry& entry : followEntries.value())
         {
             std::cout << deimos::formatTimestamp(entry.timestamp) << " "
-                      << padRight(std::string{deimos::toString(entry.level)}, 6) << " [" << entry.source << "] "
-                      << entry.message << "\n";
+                      << padRight(std::string{deimos::labels::logLevel(entry.level)}, 7) << " [" << entry.source
+                      << "] " << entry.message << "\n";
             lastSequence = entry.sequence;
         }
     }
@@ -724,7 +699,7 @@ int commandConfig(const CliArguments& arguments, const GlobalOptions& options)
 
     if (subcommand != "show")
     {
-        std::cerr << "deimos: unknown config subcommand '" << subcommand << "'\n";
+        std::cerr << "deimos: " << deimos::i18n::tr("cli.error.unknownConfig", {subcommand}) << "\n";
         return EXIT_USAGE;
     }
 
@@ -754,16 +729,18 @@ int commandDoctor(const CliArguments& arguments, const GlobalOptions& options)
     auto client = makeClient(options);
     bool healthy = true;
 
-    std::cout << "endpoint      " << client.endpoint().describe() << "\n";
+    std::cout << padRight(deimos::i18n::tr("cli.doctor.endpoint"), 14) << client.endpoint().describe() << "\n";
 
     const auto health = client.health();
     if (!health)
     {
-        std::cout << "reachability  FAILED: " << health.error().describe() << "\n";
-        std::cout << "\nhint: start the daemon with 'deimosd --foreground'\n";
+        std::cout << padRight(deimos::i18n::tr("cli.doctor.reachability"), 14)
+                  << deimos::i18n::tr("cli.doctor.failed", {health.error().describe()}) << "\n";
+        std::cout << "\n" << deimos::i18n::tr("cli.doctor.hintStart") << "\n";
         return EXIT_CONNECTION;
     }
-    std::cout << "reachability  ok (" << health.value().version << ")\n";
+    std::cout << padRight(deimos::i18n::tr("cli.doctor.reachability"), 14)
+              << deimos::i18n::tr("cli.doctor.ok", {health.value().version}) << "\n";
 
     if (client.hasToken())
     {
@@ -771,43 +748,53 @@ int commandDoctor(const CliArguments& arguments, const GlobalOptions& options)
         if (!status)
         {
             healthy = false;
-            std::cout << "authentication FAILED: " << status.error().describe() << "\n";
-            std::cout << "\nhint: check $DEIMOS_TOKEN or the token file written by 'deimosd --generate-token'\n";
+            std::cout << padRight(deimos::i18n::tr("cli.doctor.authentication"), 14)
+                      << deimos::i18n::tr("cli.doctor.failed", {status.error().describe()}) << "\n";
+            std::cout << "\n" << deimos::i18n::tr("cli.doctor.hintToken") << "\n";
         }
         else
         {
-            std::cout << "authentication ok\n";
-            std::cout << "daemon        " << status.value().platform << "/" << status.value().architecture << ", up "
-                      << formatDuration(status.value().uptimeSeconds) << "\n";
+            std::cout << padRight(deimos::i18n::tr("cli.doctor.authentication"), 14) << deimos::i18n::tr("cli.doctor.authOk")
+                      << "\n";
+            std::cout << padRight(deimos::i18n::tr("cli.doctor.daemon"), 14)
+                      << deimos::i18n::tr("cli.doctor.daemonLine",
+                                          {status.value().platform,
+                                           status.value().architecture,
+                                           formatDuration(status.value().uptimeSeconds)})
+                      << "\n";
         }
     }
     else
     {
-        std::cout << "authentication no token configured (fine when the daemon disables auth)\n";
+        std::cout << padRight(deimos::i18n::tr("cli.doctor.authentication"), 14) << deimos::i18n::tr("cli.doctor.noToken")
+                  << "\n";
     }
 
     const auto zapret = client.zapret();
     if (!zapret)
     {
         healthy = false;
-        std::cout << "zapret        FAILED: " << zapret.error().describe() << "\n";
+        std::cout << padRight(deimos::i18n::tr("cli.doctor.zapret"), 14)
+                  << deimos::i18n::tr("cli.doctor.failed", {zapret.error().describe()}) << "\n";
     }
     else if (!zapret.value().available)
     {
         healthy = false;
-        std::cout << "zapret        not detected\n";
+        std::cout << padRight(deimos::i18n::tr("cli.doctor.zapret"), 14) << deimos::i18n::tr("cli.status.notDetected")
+                  << "\n";
         for (const deimos::Diagnostic& diagnostic : zapret.value().diagnostics)
         {
-            std::cout << "              " << diagnostic.message << "\n";
+            std::cout << std::string(14, ' ') << diagnostic.message << "\n";
         }
-        std::cout << "\nhint: set zapret.installDirectory in the daemon configuration\n";
+        std::cout << "\n" << deimos::i18n::tr("cli.doctor.hintZapret") << "\n";
     }
     else
     {
-        std::cout << "zapret        " << deimos::strings::join(zapret.value().tools, ", ") << "\n";
+        std::cout << padRight(deimos::i18n::tr("cli.doctor.zapret"), 14)
+                  << deimos::strings::join(zapret.value().tools, ", ") << "\n";
         if (!zapret.value().baseDirectory.empty())
         {
-            std::cout << "              " << zapret.value().baseDirectory << "\n";
+            std::cout << std::string(14, ' ') << zapret.value().baseDirectory << "\n";
         }
     }
 
@@ -825,7 +812,7 @@ int commandEndpoints(const CliArguments& arguments, const GlobalOptions& options
     {
         if (state.endpoints.empty())
         {
-            std::cout << "no saved endpoints (pass --endpoint to talk to a daemon)\n";
+            std::cout << deimos::i18n::tr("cli.endpoints.none") << "\n";
             return EXIT_OK;
         }
         for (const auto& [name, endpoint] : state.endpoints)
@@ -843,7 +830,7 @@ int commandEndpoints(const CliArguments& arguments, const GlobalOptions& options
                                                                        : arguments.value("url");
         if (name.empty() || url.empty())
         {
-            std::cerr << "deimos: endpoints add NAME URL\n";
+            std::cerr << "deimos: " << deimos::i18n::tr("cli.error.endpointsAdd") << "\n";
             return EXIT_USAGE;
         }
 
@@ -867,7 +854,7 @@ int commandEndpoints(const CliArguments& arguments, const GlobalOptions& options
         {
             return EXIT_FAILURE_CODE;
         }
-        std::cout << "endpoint " << name << " saved\n";
+        std::cout << deimos::i18n::tr("cli.endpoints.saved", {name}) << "\n";
         return EXIT_OK;
     }
 
@@ -876,7 +863,7 @@ int commandEndpoints(const CliArguments& arguments, const GlobalOptions& options
         const std::string name = arguments.positionals.size() > 2 ? arguments.positionals[2] : std::string{};
         if (state.endpoints.count(name) == 0)
         {
-            std::cerr << "deimos: unknown endpoint '" << name << "'\n";
+            std::cerr << "deimos: " << deimos::i18n::tr("cli.error.unknownEndpoint", {name}) << "\n";
             return EXIT_FAILURE_CODE;
         }
         state.current = name;
@@ -884,7 +871,7 @@ int commandEndpoints(const CliArguments& arguments, const GlobalOptions& options
         {
             return EXIT_FAILURE_CODE;
         }
-        std::cout << "current endpoint: " << name << "\n";
+        std::cout << deimos::i18n::tr("cli.endpoints.current", {name}) << "\n";
         return EXIT_OK;
     }
 
@@ -893,7 +880,7 @@ int commandEndpoints(const CliArguments& arguments, const GlobalOptions& options
         const std::string name = arguments.positionals.size() > 2 ? arguments.positionals[2] : std::string{};
         if (state.endpoints.erase(name) == 0)
         {
-            std::cerr << "deimos: unknown endpoint '" << name << "'\n";
+            std::cerr << "deimos: " << deimos::i18n::tr("cli.error.unknownEndpoint", {name}) << "\n";
             return EXIT_FAILURE_CODE;
         }
         if (state.current == name)
@@ -904,11 +891,11 @@ int commandEndpoints(const CliArguments& arguments, const GlobalOptions& options
         {
             return EXIT_FAILURE_CODE;
         }
-        std::cout << "endpoint " << name << " removed\n";
+        std::cout << deimos::i18n::tr("cli.endpoints.removed", {name}) << "\n";
         return EXIT_OK;
     }
 
-    std::cerr << "deimos: unknown endpoints subcommand '" << subcommand << "'\n";
+    std::cerr << "deimos: " << deimos::i18n::tr("cli.error.unknownEndpoints", {subcommand}) << "\n";
     return EXIT_USAGE;
 }
 
@@ -926,6 +913,9 @@ int runCli(int argc, char** argv)
 #endif
 
     const CliArguments arguments = parseArguments(argc, argv);
+
+    const std::string requestedLanguage = arguments.value("lang");
+    deimos::i18n::setLanguageByCode(requestedLanguage.empty() ? "auto" : requestedLanguage);
 
     if (arguments.has("version"))
     {
@@ -989,7 +979,7 @@ int runCli(int argc, char** argv)
         return commandEndpoints(arguments, options);
     }
 
-    std::cerr << "deimos: unknown command '" << command << "'\n\n";
+    std::cerr << "deimos: " << deimos::i18n::tr("cli.error.unknownCommand", {command}) << "\n\n";
     printUsage();
     return EXIT_USAGE;
 }

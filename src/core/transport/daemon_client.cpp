@@ -5,6 +5,7 @@
 #include <httplib.h>
 #include <nlohmann/json.hpp>
 
+#include <deimos/support/i18n.hpp>
 #include <deimos/support/strings.hpp>
 
 namespace deimos
@@ -22,21 +23,21 @@ std::string describeTransportError(httplib::Error error)
     switch (error)
     {
     case httplib::Error::Connection:
-        return "connection refused or unreachable";
+        return i18n::tr("err.net.connection");
     case httplib::Error::ConnectionTimeout:
-        return "connection timed out";
+        return i18n::tr("err.net.connectTimeout");
     case httplib::Error::Timeout:
-        return "request timed out";
+        return i18n::tr("err.net.timeout");
     case httplib::Error::Read:
-        return "connection closed while reading the response";
+        return i18n::tr("err.net.read");
     case httplib::Error::Write:
-        return "connection closed while writing the request";
+        return i18n::tr("err.net.write");
     case httplib::Error::Canceled:
-        return "request canceled";
+        return i18n::tr("err.net.canceled");
     default:
         break;
     }
-    return "network error";
+    return i18n::tr("err.net.generic");
 }
 
 std::uint16_t defaultPortForScheme(const std::string& scheme)
@@ -148,8 +149,8 @@ Result<std::string> DaemonClient::call(std::string_view method,
     {
 #ifndef CPPHTTPLIB_OPENSSL_SUPPORT
         return Result<std::string>{Error{ErrorCode::notSupported,
-                                         "HTTPS is not available in this build",
-                                         "rebuild with -DDEIMOS_ENABLE_TLS=ON"}};
+                                         i18n::tr("err.client.httpsUnsupported"),
+                                         i18n::tr("err.client.httpsHint")}};
 #endif
     }
 
@@ -193,13 +194,14 @@ Result<std::string> DaemonClient::call(std::string_view method,
     }
     else
     {
-        return Result<std::string>{Error{ErrorCode::invalidArgument, "unsupported HTTP method", upperMethod}};
+        return Result<std::string>{
+            Error{ErrorCode::invalidArgument, i18n::tr("err.client.method"), upperMethod}};
     }
 
     if (!response)
     {
         return Result<std::string>{Error{ErrorCode::network,
-                                         "cannot reach the daemon at " + endpoint.describe(),
+                                         i18n::tr("err.client.unreachable", {endpoint.describe()}),
                                          describeTransportError(response.error())}};
     }
 
@@ -217,7 +219,7 @@ Result<std::string> DaemonClient::call(std::string_view method,
 
     return Result<std::string>{
         Error{status == 401 ? ErrorCode::unauthorized : ErrorCode::internal,
-              "daemon returned HTTP " + std::to_string(status),
+              i18n::tr("err.client.httpStatus", {std::to_string(status)}),
               strings::trim(response->body)}};
 }
 

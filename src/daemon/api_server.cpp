@@ -7,6 +7,7 @@
 #include <nlohmann/json.hpp>
 
 #include <deimos/model/profile.hpp>
+#include <deimos/support/i18n.hpp>
 #include <deimos/support/platform.hpp>
 #include <deimos/support/strings.hpp>
 #include <deimos/transport/protocol.hpp>
@@ -133,7 +134,7 @@ std::optional<HttpResponse> ApiServer::authenticate(const HttpRequest& request) 
     const std::string provided = request.header("authorization");
     if (!constantTimeEquals(provided, "Bearer " + expected))
     {
-        HttpResponse response = errorResponse(ErrorCode::unauthorized, "missing or invalid access token");
+        HttpResponse response = errorResponse(ErrorCode::unauthorized, i18n::tr("api.error.unauthorized"));
         response.headers["WWW-Authenticate"] = "Bearer";
         return response;
     }
@@ -186,14 +187,15 @@ HttpResponse ApiServer::handleStartEngine(const HttpRequest& request)
     }
     if (profileId.empty())
     {
-        return errorResponse(ErrorCode::invalidArgument, "no profile selected",
-                             "pass profileId or activate a profile first");
+        return errorResponse(ErrorCode::invalidArgument,
+                             i18n::tr("api.error.noProfile"),
+                             i18n::tr("api.error.noProfileHint"));
     }
 
     const Profile* profile = config.findProfile(profileId);
     if (profile == nullptr)
     {
-        return errorResponse(ErrorCode::notFound, "profile not found", profileId);
+        return errorResponse(ErrorCode::notFound, i18n::tr("api.error.profileNotFound"), profileId);
     }
 
     const auto result = dependencies_.engine->start(*profile);
@@ -230,7 +232,7 @@ HttpResponse ApiServer::handleRestartEngine(const HttpRequest& request)
     const Profile* profile = config.findProfile(profileId);
     if (profile == nullptr)
     {
-        return errorResponse(ErrorCode::notFound, "profile not found", profileId);
+        return errorResponse(ErrorCode::notFound, i18n::tr("api.error.profileNotFound"), profileId);
     }
 
     const auto result = dependencies_.engine->restart(*profile);
@@ -264,7 +266,7 @@ HttpResponse ApiServer::handleGetProfile(const HttpRequest& request) const
     const Profile* profile = config.findProfile(id);
     if (profile == nullptr)
     {
-        return errorResponse(ErrorCode::notFound, "profile not found", id);
+        return errorResponse(ErrorCode::notFound, i18n::tr("api.error.profileNotFound"), id);
     }
     return jsonResponse(200, serializeProfile(*profile));
 }
@@ -274,7 +276,7 @@ HttpResponse ApiServer::handleSaveProfile(const HttpRequest& request)
     const std::string id = pathParam(request, "id");
     if (id.empty())
     {
-        return errorResponse(ErrorCode::invalidArgument, "profile id is required");
+        return errorResponse(ErrorCode::invalidArgument, i18n::tr("api.error.profileRequired"));
     }
 
     Profile profile;
@@ -285,7 +287,7 @@ HttpResponse ApiServer::handleSaveProfile(const HttpRequest& request)
         nlohmann::json root;
         root["error"] = nlohmann::json{
             {"code", "invalid_argument"},
-            {"message", "profile is invalid"},
+            {"message", i18n::tr("api.error.profileInvalid")},
             {"detail", ""},
         };
         root["diagnostics"] = nlohmann::json::parse(serializeDiagnostics(diagnostics, false));
@@ -302,7 +304,7 @@ HttpResponse ApiServer::handleSaveProfile(const HttpRequest& request)
         return errorResponse(saveStatus.error());
     }
 
-    log::info("api", std::string{replaced ? "updated" : "created"} + " profile '" + id + "'");
+    log::info("api", i18n::tr(replaced ? "log.api.profileUpdated" : "log.api.profileCreated", {id}));
     return jsonResponse(replaced ? 200 : 201, serializeProfile(profile));
 }
 
@@ -313,7 +315,7 @@ HttpResponse ApiServer::handleDeleteProfile(const HttpRequest& request)
     DeimosConfig config = dependencies_.configStore->config();
     if (!config.removeProfile(id))
     {
-        return errorResponse(ErrorCode::notFound, "profile not found", id);
+        return errorResponse(ErrorCode::notFound, i18n::tr("api.error.profileNotFound"), id);
     }
     if (config.daemon.activeProfileId == id)
     {
@@ -325,7 +327,7 @@ HttpResponse ApiServer::handleDeleteProfile(const HttpRequest& request)
         return errorResponse(saveStatus.error());
     }
 
-    log::info("api", "deleted profile '" + id + "'");
+    log::info("api", i18n::tr("log.api.profileDeleted", {id}));
     return jsonResponse(200, R"({"deleted":"yes"})");
 }
 
@@ -337,7 +339,7 @@ HttpResponse ApiServer::handleActivateProfile(const HttpRequest& request)
     const Profile* profile = config.findProfile(id);
     if (profile == nullptr)
     {
-        return errorResponse(ErrorCode::notFound, "profile not found", id);
+        return errorResponse(ErrorCode::notFound, i18n::tr("api.error.profileNotFound"), id);
     }
 
     config.daemon.activeProfileId = id;
@@ -367,7 +369,7 @@ HttpResponse ApiServer::handlePreviewProfile(const HttpRequest& request) const
     const Profile* profile = config.findProfile(id);
     if (profile == nullptr)
     {
-        return errorResponse(ErrorCode::notFound, "profile not found", id);
+        return errorResponse(ErrorCode::notFound, i18n::tr("api.error.profileNotFound"), id);
     }
 
     const ToolPaths paths = dependencies_.engine->toolPaths();

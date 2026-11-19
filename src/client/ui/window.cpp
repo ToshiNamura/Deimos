@@ -12,6 +12,8 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+#include <string>
+
 #include "app.hpp"
 #include "theme.hpp"
 
@@ -28,7 +30,7 @@ void glfwErrorCallback(int code, const char* description)
 namespace deimos::ui
 {
 
-int runWindow()
+int runWindow(const std::string& languageOverride)
 {
     glfwSetErrorCallback(glfwErrorCallback);
     if (glfwInit() == GLFW_FALSE)
@@ -71,6 +73,7 @@ int runWindow()
     ImGui_ImplOpenGL3_Init("#version 150");
 
     App app;
+    app.setLanguageOverride(languageOverride);
     app.initialize();
 
     while (glfwWindowShouldClose(window) == GLFW_FALSE)

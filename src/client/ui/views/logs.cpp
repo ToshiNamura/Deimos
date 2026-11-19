@@ -4,6 +4,8 @@
 #include <cctype>
 #include <string>
 
+#include <deimos/support/i18n.hpp>
+#include <deimos/support/labels.hpp>
 #include <deimos/support/strings.hpp>
 
 #include "theme.hpp"
@@ -11,6 +13,8 @@
 
 namespace deimos::ui
 {
+using i18n::tr;
+
 namespace
 {
 
@@ -56,25 +60,29 @@ void App::renderLogs()
     cardBegin("##logs", ImVec2(width, 0.0f));
 
     ImGui::PushItemWidth(240.0f);
-    inputStringWithHint("##filter", "filter by text or source", logsFilter_);
+    inputStringWithHint("##filter", tr("ui.logs.filterHint").c_str(), logsFilter_);
     ImGui::PopItemWidth();
     ImGui::SameLine(300.0f);
 
     static int minimumLevel = 0;
-    const char* levelLabels[] = {"trace", "debug", "info", "warn", "error"};
+    const char* levelLabels[] = {labels::logLevel(LogLevel::trace).data(),
+                                 labels::logLevel(LogLevel::debug).data(),
+                                 labels::logLevel(LogLevel::info).data(),
+                                 labels::logLevel(LogLevel::warning).data(),
+                                 labels::logLevel(LogLevel::error).data()};
     ImGui::PushItemWidth(130.0f);
     ImGui::Combo("##level", &minimumLevel, levelLabels, IM_ARRAYSIZE(levelLabels));
     ImGui::PopItemWidth();
     ImGui::SameLine();
 
-    toggleSwitch("Auto scroll", logsAutoScroll_);
+    toggleSwitch(tr("ui.logs.autoscroll").c_str(), logsAutoScroll_);
     ImGui::SameLine();
-    if (secondaryButton("Refresh"))
+    if (secondaryButton(tr("ui.action.refresh").c_str()))
     {
         refreshNow();
     }
     ImGui::SameLine();
-    mutedText((std::to_string(current.logs.size()) + " entries").c_str());
+    mutedText(tr("ui.logs.entries", {std::to_string(current.logs.size())}).c_str());
 
     spacer(6.0f);
 
@@ -93,7 +101,7 @@ void App::renderLogs()
         ImGui::SameLine(190.0f);
 
         ImGui::PushStyleColor(ImGuiCol_Text, colorVec4(levelColor(entry.level)));
-        ImGui::Text("%-6s", std::string{toString(entry.level)}.c_str());
+        ImGui::Text("%-7s", std::string{labels::logLevel(entry.level)}.c_str());
         ImGui::PopStyleColor();
         ImGui::SameLine(250.0f);
 

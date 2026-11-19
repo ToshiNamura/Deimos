@@ -1,5 +1,7 @@
 add_library(deimos_core STATIC
     support/error.cpp
+    support/i18n.cpp
+    support/labels.cpp
     support/log.cpp
     support/platform.cpp
     support/strings.cpp
@@ -7,6 +9,7 @@ add_library(deimos_core STATIC
     model/config.cpp
     model/desync.cpp
     model/diagnostic.cpp
+    model/diagnostic_i18n.cpp
     model/profile.cpp
 
     zapret/command_builder.cpp

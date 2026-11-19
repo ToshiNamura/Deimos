@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <optional>
 
+#include <deimos/model/diagnostic_i18n.hpp>
 #include <deimos/support/platform.hpp>
 #include <deimos/support/strings.hpp>
 
@@ -252,9 +253,9 @@ ToolchainReport detectZapret(const ZapretSettings& settings)
             target = *onPath;
             return;
         }
-        diagnostics.push_back(warning("zapret.override.missing",
-                                      std::string{"configured '"} + field + "' does not exist: " + configured,
-                                      std::string{"zapret."} + field));
+        diagnostics.push_back(warningAt("zapret.override.missing",
+                                        std::string{"zapret."} + field,
+                                        {std::string{field}, configured}));
     };
 
     overrideTool(settings.winwsPath, "winwsPath", report.paths.winws);
@@ -272,9 +273,9 @@ ToolchainReport detectZapret(const ZapretSettings& settings)
         }
         else
         {
-            diagnostics.push_back(error("zapret.install_directory.missing",
-                                        "zapret install directory does not exist: " + settings.installDirectory,
-                                        "zapret.installDirectory"));
+            diagnostics.push_back(errorAt("zapret.install_directory.missing",
+                                          "zapret.installDirectory",
+                                          {settings.installDirectory}));
         }
     }
     else
@@ -328,15 +329,15 @@ ToolchainReport detectZapret(const ZapretSettings& settings)
 
     if (!report.paths.winws.empty())
     {
-        diagnostics.push_back(info("zapret.tool.found", "winws: " + report.paths.winws.string()));
+        diagnostics.push_back(infoAt("zapret.tool.found", "", {"winws", report.paths.winws.string()}));
     }
     if (!report.paths.nfqws.empty())
     {
-        diagnostics.push_back(info("zapret.tool.found", "nfqws: " + report.paths.nfqws.string()));
+        diagnostics.push_back(infoAt("zapret.tool.found", "", {"nfqws", report.paths.nfqws.string()}));
     }
     if (!report.paths.tpws.empty())
     {
-        diagnostics.push_back(info("zapret.tool.found", "tpws: " + report.paths.tpws.string()));
+        diagnostics.push_back(infoAt("zapret.tool.found", "", {"tpws", report.paths.tpws.string()}));
     }
 
     if (!report.paths.any())
@@ -350,12 +351,11 @@ ToolchainReport detectZapret(const ZapretSettings& settings)
             }
             searched += root;
         }
-        diagnostics.push_back(error("zapret.not_found",
-                                    "no zapret executables found; searched: " + searched,
-                                    "zapret.installDirectory"));
+        diagnostics.push_back(
+            errorAt("zapret.not_found", "zapret.installDirectory", {searched}));
         report.status = Status::failure(ErrorCode::notFound,
-                                        "zapret is not installed or not detected",
-                                        "set zapret.installDirectory to a zapret tree containing binaries/");
+                                        i18n::tr("err.zapret.not_found"),
+                                        i18n::tr("err.zapret.not_found.detail"));
     }
     else
     {

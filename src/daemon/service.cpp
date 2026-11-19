@@ -7,6 +7,7 @@
 
 #include <deimos/model/config.hpp>
 #include <deimos/support/platform.hpp>
+#include <deimos/support/i18n.hpp>
 #include <deimos/support/strings.hpp>
 
 #ifdef _WIN32
@@ -227,13 +228,13 @@ Status install(const InstallOptions& options, std::string& message)
 {
     if (!isPlausibleServiceName(options.serviceName))
     {
-        return Status::failure(ErrorCode::invalidArgument, "invalid service name", options.serviceName);
+        return Status::failure(ErrorCode::invalidArgument, i18n::tr("err.service.invalidName"), options.serviceName);
     }
 
     const std::string executable = resolveExecutable(options);
     if (executable.empty())
     {
-        return Status::failure(ErrorCode::notFound, "cannot resolve the daemon executable path");
+        return Status::failure(ErrorCode::notFound, i18n::tr("err.service.resolveExecutable"));
     }
 
     std::string commandLine = "\"" + executable + "\"";
@@ -275,7 +276,7 @@ Status install(const InstallOptions& options, std::string& message)
         CloseServiceHandle(manager);
         if (lastError == ERROR_SERVICE_EXISTS)
         {
-            return Status::failure(ErrorCode::alreadyExists, "the service is already installed", options.serviceName);
+            return Status::failure(ErrorCode::alreadyExists, i18n::tr("err.service.alreadyInstalled"), options.serviceName);
         }
         return Status::failure(ErrorCode::io,
                                "cannot create the service",
@@ -310,13 +311,13 @@ Status uninstall(const std::string& serviceName, std::string& message)
 {
     if (!isPlausibleServiceName(serviceName))
     {
-        return Status::failure(ErrorCode::invalidArgument, "invalid service name", serviceName);
+        return Status::failure(ErrorCode::invalidArgument, i18n::tr("err.service.invalidName"), serviceName);
     }
 
     SC_HANDLE manager = OpenSCManagerW(nullptr, nullptr, SC_MANAGER_CONNECT);
     if (manager == nullptr)
     {
-        return Status::failure(ErrorCode::unauthorized, "cannot open the service control manager");
+        return Status::failure(ErrorCode::unauthorized, i18n::tr("err.service.openManager"));
     }
 
     const std::wstring wideName = strings::toWide(serviceName);
@@ -327,9 +328,9 @@ Status uninstall(const std::string& serviceName, std::string& message)
         CloseServiceHandle(manager);
         if (lastError == ERROR_SERVICE_DOES_NOT_EXIST)
         {
-            return Status::failure(ErrorCode::notFound, "the service is not installed", serviceName);
+            return Status::failure(ErrorCode::notFound, i18n::tr("err.service.notInstalled"), serviceName);
         }
-        return Status::failure(ErrorCode::io, "cannot open the service", "windows error " + std::to_string(lastError));
+        return Status::failure(ErrorCode::io, i18n::tr("err.service.openService"), "windows error " + std::to_string(lastError));
     }
 
     SERVICE_STATUS status{};
@@ -342,7 +343,7 @@ Status uninstall(const std::string& serviceName, std::string& message)
 
     if (!deleted)
     {
-        return Status::failure(ErrorCode::io, "cannot delete the service", "windows error " + std::to_string(lastError));
+        return Status::failure(ErrorCode::io, i18n::tr("err.service.deleteService"), "windows error " + std::to_string(lastError));
     }
 
     message = "service '" + serviceName + "' removed";
@@ -374,7 +375,7 @@ Status install(const InstallOptions& options, std::string& message)
 {
     if (!isPlausibleServiceName(options.serviceName))
     {
-        return Status::failure(ErrorCode::invalidArgument, "invalid service name", options.serviceName);
+        return Status::failure(ErrorCode::invalidArgument, i18n::tr("err.service.invalidName"), options.serviceName);
     }
 
 #if defined(__APPLE__)
@@ -388,13 +389,13 @@ Status install(const InstallOptions& options, std::string& message)
     if (!platform::isElevated())
     {
         message = "installation requires root. Write this file to " + path + ":\n\n" + content;
-        return Status::failure(ErrorCode::unauthorized, "root privileges are required to install the service", path);
+        return Status::failure(ErrorCode::unauthorized, i18n::tr("err.service.rootRequired"), path);
     }
 
     std::string errorMessage;
     if (!platform::writeFile(path, content, errorMessage))
     {
-        return Status::failure(ErrorCode::io, "cannot write the service definition", errorMessage);
+        return Status::failure(ErrorCode::io, i18n::tr("err.service.writeDefinition"), errorMessage);
     }
 
 #if defined(__APPLE__)
@@ -409,7 +410,7 @@ Status install(const InstallOptions& options, std::string& message)
     if (runCommand(registerCommand) != 0)
     {
         message = "service definition written to " + path + " but the init system reported an error";
-        return Status::failure(ErrorCode::io, "cannot register the service with the init system", registerCommand);
+        return Status::failure(ErrorCode::io, i18n::tr("err.service.register"), registerCommand);
     }
 
     if (options.startImmediately)
@@ -425,11 +426,11 @@ Status uninstall(const std::string& serviceName, std::string& message)
 {
     if (!isPlausibleServiceName(serviceName))
     {
-        return Status::failure(ErrorCode::invalidArgument, "invalid service name", serviceName);
+        return Status::failure(ErrorCode::invalidArgument, i18n::tr("err.service.invalidName"), serviceName);
     }
     if (!platform::isElevated())
     {
-        return Status::failure(ErrorCode::unauthorized, "root privileges are required to remove the service");
+        return Status::failure(ErrorCode::unauthorized, i18n::tr("err.service.rootRequiredRemove"));
     }
 
 #if defined(__APPLE__)
