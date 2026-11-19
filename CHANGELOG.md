@@ -22,8 +22,13 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `deimosd --validate-config` no longer creates a configuration file when the target path
+  is missing. Loading the configuration is now read-only; only daemon startup persists the
+  defaults.
 - The engine state pill in the top bar showed the raw internal state instead of its
   translated label.
+- `formatTimestamp()` no longer trips `-Wformat-truncation` on GCC, which failed the Linux
+  CI job in every branch.
 
 ## [0.1.0] - 2026-11-18
 

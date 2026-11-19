@@ -45,15 +45,13 @@ Status ConfigStore::load(std::vector<Diagnostic>* diagnostics)
     std::lock_guard<std::mutex> lock(mutex_);
 
     const std::filesystem::path filePath{path_};
-    platform::ensureDirectory(filePath.parent_path());
-
     const auto content = platform::readFile(filePath);
     if (!content.has_value())
     {
         config_ = defaultConfig();
         loaded_ = true;
-        log::warning("config", i18n::tr("log.config.defaultsWritten", {path_}));
-        return saveLocked(diagnostics);
+        log::warning("config", i18n::tr("log.config.defaultsInMemory", {path_}));
+        return Status::ok();
     }
 
     DeimosConfig config;
@@ -78,6 +76,11 @@ Status ConfigStore::save(std::vector<Diagnostic>* diagnostics)
 {
     std::lock_guard<std::mutex> lock(mutex_);
     return saveLocked(diagnostics);
+}
+
+bool ConfigStore::configFileExists() const
+{
+    return std::filesystem::exists(std::filesystem::path{path_});
 }
 
 Status ConfigStore::saveLocked(std::vector<Diagnostic>* diagnostics)

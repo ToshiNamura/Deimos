@@ -16,8 +16,12 @@ class ConfigStore
 public:
     explicit ConfigStore(std::string path);
 
-    /// Loads the configuration, creating a default file when none exists.
+    /// Loads the configuration. A missing file is filled with defaults in memory
+    /// but is not written to disk; callers decide whether to persist via save().
     Status load(std::vector<Diagnostic>* diagnostics = nullptr);
+
+    /// True when a configuration file exists on disk at the configured path.
+    bool configFileExists() const;
 
     /// Validates and writes the configuration back atomically.
     Status save(std::vector<Diagnostic>* diagnostics = nullptr);

@@ -36,6 +36,7 @@ Status DaemonApp::initialize()
 
     store_ = std::make_unique<ConfigStore>(configPath);
 
+    const bool configFileMissing = !store_->configFileExists();
     std::vector<Diagnostic> diagnostics;
     if (const Status status = store_->load(&diagnostics); !status.isOk())
     {
@@ -44,6 +45,20 @@ Status DaemonApp::initialize()
             log::error("config", std::string{labels::severity(diagnostic.severity)} + ": " + diagnostic.message);
         }
         return status;
+    }
+
+    // Only a real daemon start bootstraps a missing configuration file on disk.
+    // Read-only commands (e.g. --validate-config) call ConfigStore::load() directly.
+    if (configFileMissing)
+    {
+        if (const Status status = store_->save(&diagnostics); !status.isOk())
+        {
+            for (const Diagnostic& diagnostic : diagnostics)
+            {
+                log::error("config", std::string{labels::severity(diagnostic.severity)} + ": " + diagnostic.message);
+            }
+            return status;
+        }
     }
 
     DeimosConfig config = store_->config();
@@ -70,6 +85,11 @@ Status DaemonApp::initialize()
                         std::string{platform::platformName()},
                         std::string{platform::architectureName()}}));
     log::info("config", i18n::tr("log.config.file", {configPath}));
+    if (configFileMissing)
+    {
+        // Logged here rather than at save() time: the sinks are only configured above.
+        log::info("config", i18n::tr("log.config.defaultsPersisted", {configPath}));
+    }
     return Status::ok();
 }
 
