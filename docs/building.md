@@ -1,3 +1,7 @@
+<p align="center">
+  <b>🇬🇧 English</b> &nbsp;·&nbsp; <a href="ru/building.md">🇷🇺 Русский</a>
+</p>
+
 # Building
 
 ## Requirements

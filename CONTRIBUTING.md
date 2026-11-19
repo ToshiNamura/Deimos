@@ -1,3 +1,7 @@
+<p align="center">
+  <b>🇬🇧 English</b> &nbsp;·&nbsp; <a href="docs/ru/CONTRIBUTING.md">🇷🇺 Русский</a>
+</p>
+
 # Contributing to Deimos
 
 Thanks for taking the time to improve Deimos. This page describes how the project is

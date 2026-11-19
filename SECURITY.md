@@ -1,3 +1,7 @@
+<p align="center">
+  <b>🇬🇧 English</b> &nbsp;·&nbsp; <a href="docs/ru/SECURITY.md">🇷🇺 Русский</a>
+</p>
+
 # Security policy
 
 ## Supported versions

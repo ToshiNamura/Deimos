@@ -1,3 +1,7 @@
+<p align="center">
+  <b>🇬🇧 English</b> &nbsp;·&nbsp; <a href="ru/daemon-api.md">🇷🇺 Русский</a>
+</p>
+
 # Daemon API
 
 All endpoints live under `/api/v1`. Requests and responses are JSON unless stated

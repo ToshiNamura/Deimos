@@ -19,6 +19,9 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Project assets: `assets/logo.png`, `assets/icon.png` (283x300) and
   `assets/background.png` (1200x300), with `assets/generate-assets.ps1` to regenerate them.
 - [docs/localization.md](docs/localization.md), a guide to the message catalog.
+- Russian translations of the whole documentation set under `docs/ru/` (README,
+  CONTRIBUTING, SECURITY and every guide), each with a centred language switcher at the top
+  and a note pinning the English revision it mirrors.
 
 ### Fixed
 

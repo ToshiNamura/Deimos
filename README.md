@@ -1,10 +1,18 @@
+<p align="center">
+  <b>🇬🇧 English</b> &nbsp;·&nbsp; <a href="docs/ru/README.md">🇷🇺 Русский</a>
+</p>
+
+<p align="center">
+  <img src="assets/background.png" alt="Deimos" width="100%">
+</p>
+
+<p align="center">
+  <a href="https://github.com/ToshiNamura/Deimos/actions/workflows/ci.yml"><img src="https://github.com/ToshiNamura/Deimos/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="CMakeLists.txt"><img src="https://img.shields.io/badge/C%2B%2B-20-blue.svg" alt="C++20"></a>
+</p>
+
 # Deimos
-
-[![CI](https://github.com/ToshiNamura/Deimos/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ToshiNamura/Deimos/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![C++20](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](CMakeLists.txt)
-
-![Deimos](assets/background.png)
 
 Deimos is a cross-platform control plane for DPI bypass on top of
 [zapret](https://github.com/bol-van/zapret) and [zapret2](https://github.com/bol-van/zapret2).

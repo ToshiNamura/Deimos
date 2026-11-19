@@ -1,3 +1,7 @@
+<p align="center">
+  <b>🇬🇧 English</b> &nbsp;·&nbsp; <a href="ru/deployment.md">🇷🇺 Русский</a>
+</p>
+
 # Deployment
 
 The daemon is the only component that has to run on the machine whose traffic is being

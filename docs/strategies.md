@@ -1,3 +1,7 @@
+<p align="center">
+  <b>🇬🇧 English</b> &nbsp;·&nbsp; <a href="ru/strategies.md">🇷🇺 Русский</a>
+</p>
+
 # Strategies and zapret mapping
 
 A *profile* is Deimos' portable description of a bypass strategy. It is intentionally

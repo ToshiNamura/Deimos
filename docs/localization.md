@@ -1,3 +1,7 @@
+<p align="center">
+  <b>🇬🇧 English</b> &nbsp;·&nbsp; <a href="ru/localization.md">🇷🇺 Русский</a>
+</p>
+
 # Localisation
 
 Deimos ships English and Russian in the same binary. Nothing is downloaded and nothing is

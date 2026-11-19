@@ -1,3 +1,7 @@
+<p align="center">
+  <b>🇬🇧 English</b> &nbsp;·&nbsp; <a href="ru/architecture.md">🇷🇺 Русский</a>
+</p>
+
 # Architecture
 
 Deimos is a control plane for DPI bypass. It does not implement packet editing itself:
