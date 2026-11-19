@@ -1,6 +1,11 @@
+#include <chrono>
+#include <filesystem>
+#include <string>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
+
+#include "config_store.hpp"
 
 #include <deimos/model/config.hpp>
 #include <deimos/model/profile.hpp>
@@ -176,4 +181,27 @@ TEST_CASE("slugify_NormalisesText", "[config]")
     REQUIRE(slugify("TLS Split (443)") == "tls-split-443");
     REQUIRE(slugify("  ---  ") == "");
     REQUIRE(slugify("YouTube QUIC") == "youtube-quic");
+}
+
+TEST_CASE("configStore_LoadMissingPath_DoesNotWriteFile", "[config]")
+{
+    const auto ticks = std::chrono::steady_clock::now().time_since_epoch().count();
+    const std::filesystem::path directory =
+        std::filesystem::temp_directory_path() / ("deimos-config-" + std::to_string(ticks));
+    const std::filesystem::path path = directory / "deimos.json";
+    std::error_code errorCode;
+    std::filesystem::remove_all(directory, errorCode);
+
+    ConfigStore store(path.string());
+    REQUIRE(store.load().isOk());
+    REQUIRE(store.config().daemon.activeProfileId == "tls-split");
+
+    // A read-only load (the --validate-config path) must not persist anything.
+    REQUIRE_FALSE(std::filesystem::exists(path));
+
+    // Persisting defaults is an explicit operation used by the daemon startup path.
+    REQUIRE(store.save().isOk());
+    REQUIRE(std::filesystem::exists(path));
+
+    std::filesystem::remove_all(directory, errorCode);
 }

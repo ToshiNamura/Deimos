@@ -30,6 +30,7 @@ Status DaemonApp::initialize()
 
     store_ = std::make_unique<ConfigStore>(configPath);
 
+    const bool configFileMissing = !store_->configFileExists();
     std::vector<Diagnostic> diagnostics;
     if (const Status status = store_->load(&diagnostics); !status.isOk())
     {
@@ -38,6 +39,21 @@ Status DaemonApp::initialize()
             log::error("config", std::string{toString(diagnostic.severity)} + ": " + diagnostic.message);
         }
         return status;
+    }
+
+    // Only a real daemon start bootstraps a missing configuration file on disk.
+    // Read-only commands (e.g. --validate-config) call ConfigStore::load() directly.
+    if (configFileMissing)
+    {
+        if (const Status status = store_->save(&diagnostics); !status.isOk())
+        {
+            for (const Diagnostic& diagnostic : diagnostics)
+            {
+                log::error("config", std::string{toString(diagnostic.severity)} + ": " + diagnostic.message);
+            }
+            return status;
+        }
+        log::info("config", "wrote default configuration to " + configPath);
     }
 
     DeimosConfig config = store_->config();

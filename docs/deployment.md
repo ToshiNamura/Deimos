@@ -48,6 +48,13 @@ State and configuration live in:
 Logs are written to `deimosd.log` in the state directory in addition to the in-memory
 history served by the API.
 
+### Which commands write to disk
+
+Only a real daemon start writes the configuration file: on first launch `deimosd` creates
+it with defaults when the path is missing. Read-only commands never create or modify it —
+`--validate-config` validates the file (or the in-memory defaults when the path does not
+exist) and leaves nothing behind. `--generate-token` writes only the token file.
+
 ## Windows service
 
 Run an elevated prompt:

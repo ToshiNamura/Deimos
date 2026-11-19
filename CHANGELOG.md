@@ -7,6 +7,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- `deimosd --validate-config` no longer creates a configuration file when the target path
+  is missing. Loading config is now read-only; only daemon startup persists defaults.
+
 ## [0.1.0] - 2026-11-18
 
 First public release.
