@@ -39,6 +39,23 @@ CLI manage a daemon on `127.0.0.1` and a daemon on a remote server.
 Early development. The architecture, API and configuration format are in place; the UI and
 CLI are functional but still growing.
 
+## Roadmap
+
+Work is planned in [milestones](https://github.com/ToshiNamura/Deimos/milestones):
+
+| Milestone | Theme |
+| --- | --- |
+| [v0.1.1](https://github.com/ToshiNamura/Deimos/milestone/2) | Reliability patch: read-only validation, HTTP semantics, observable engine states |
+| [v0.2.0](https://github.com/ToshiNamura/Deimos/milestone/3) | Strategy parity: every flag used by real zapret and Flowseal strategies, schema v2 |
+| [v0.3.0](https://github.com/ToshiNamura/Deimos/milestone/4) | Presets, managed lists and verified list updates |
+| [v0.4.0](https://github.com/ToshiNamura/Deimos/milestone/5) | Target checks, strategy tester, diagnostics, automatic failover |
+| [v1.0.0](https://github.com/ToshiNamura/Deimos/milestone/6) | Desktop maturity: tray, onboarding, localisation, installers |
+| [Backlog](https://github.com/ToshiNamura/Deimos/milestone/1) | zapret2, OpenWrt, per-process routing, traffic statistics |
+
+Issues labelled [`good first issue`](https://github.com/ToshiNamura/Deimos/labels/good%20first%20issue)
+are scoped to be a first contribution. Anything that is not scheduled lives in the backlog,
+so opening a feature request is the way to influence the order.
+
 ## Documentation
 
 - [Architecture](docs/architecture.md) - components, data flow, threading model, security
