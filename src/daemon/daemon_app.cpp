@@ -190,7 +190,7 @@ Status DaemonApp::start()
     }
     apiStarted_ = true;
 
-    const std::string listenUrl = "http://" + address + ":" + std::to_string(api_->boundPort());
+    const std::string listenUrl = "http://" + strings::formatEndpointUrl(address, api_->boundPort());
     log::info("api",
               i18n::tr(config.daemon.requireAuthentication ? "log.api.listeningToken" : "log.api.listeningOpen",
                        {listenUrl}));

@@ -23,6 +23,9 @@ std::string join(const std::vector<std::string>& parts, std::string_view separat
 
 std::string replaceAll(std::string_view text, std::string_view from, std::string_view to);
 
+/// Formats the host-and-port part of an endpoint URL, bracketing IPv6 literals.
+std::string formatEndpointUrl(std::string_view host, std::uint16_t port);
+
 /// Splits "80,443" or " 80 , 443 " into numbers. Returns an empty vector on malformed input.
 std::optional<std::vector<std::uint16_t>> parsePortList(std::string_view text);
 

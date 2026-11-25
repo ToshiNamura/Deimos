@@ -150,6 +150,13 @@ std::string replaceAll(std::string_view text, std::string_view from, std::string
     return result;
 }
 
+std::string formatEndpointUrl(std::string_view host, std::uint16_t port)
+{
+    const bool isBracketed = host.starts_with('[') && host.ends_with(']');
+    const bool needsBrackets = host.find(':') != std::string_view::npos && !isBracketed;
+    return (needsBrackets ? "[" + std::string{host} + "]" : std::string{host}) + ":" + std::to_string(port);
+}
+
 std::optional<std::vector<std::uint16_t>> parsePortList(std::string_view text)
 {
     std::vector<std::uint16_t> ports;
