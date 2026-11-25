@@ -49,7 +49,7 @@ std::uint16_t defaultPortForScheme(const std::string& scheme)
 
 std::string Endpoint::describe() const
 {
-    std::string text = scheme + "://" + host + ":" + std::to_string(port);
+    std::string text = scheme + "://" + strings::formatEndpointUrl(host, port);
     if (!basePath.empty())
     {
         text += basePath;

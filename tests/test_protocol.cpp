@@ -1,8 +1,32 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <deimos/support/strings.hpp>
+#include <deimos/transport/daemon_client.hpp>
 #include <deimos/transport/protocol.hpp>
 
 using namespace deimos;
+
+TEST_CASE("formatEndpointUrl_FormatsIpLiteralsAndNonDefaultPort", "[protocol]")
+{
+    REQUIRE(strings::formatEndpointUrl("127.0.0.1", 8787) == "127.0.0.1:8787");
+    REQUIRE(strings::formatEndpointUrl("::1", 18793) == "[::1]:18793");
+    REQUIRE(strings::formatEndpointUrl("[2001:db8::1]", 18793) == "[2001:db8::1]:18793");
+}
+
+TEST_CASE("endpointDescribe_FormatsIpv6AndPreservesIpv4", "[protocol]")
+{
+    Endpoint ipv4;
+    ipv4.host = "127.0.0.1";
+    ipv4.port = 18793;
+    REQUIRE(ipv4.describe() == "http://127.0.0.1:18793");
+
+    Endpoint ipv6;
+    ipv6.scheme = "https";
+    ipv6.host = "2001:db8::1";
+    ipv6.port = 18793;
+    ipv6.basePath = "/deimos";
+    REQUIRE(ipv6.describe() == "https://[2001:db8::1]:18793/deimos");
+}
 
 TEST_CASE("engineSnapshot_RoundTrips", "[protocol]")
 {
